@@ -108,14 +108,12 @@ def build(bld):
         **kwargs)
 
     if bld.env.with_tests:
-        for src in bld.path.ant_glob('tests/test_*.c'):
-            name = src.name.split('.')[0]
-            bld.program(
-                target=name,
-                source=[src],
-                includes=['src'],
-                uselib=deps + ['check'],
-                rpath=[bld.bldnode.abspath()],
-                use=['render'],
-                **kwargs)
+        bld.program(
+            target='test',
+            source=bld.path.ant_glob('tests/**/*.c'),
+            includes=['src'],
+            uselib=deps + ['check'],
+            rpath=[bld.bldnode.abspath()],
+            use=['render'],
+            **kwargs)
 

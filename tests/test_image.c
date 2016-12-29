@@ -31,8 +31,8 @@ teardown(void)
 	renderer_shutdown();
 }
 
-static Suite*
-mesh_suite(void)
+Suite*
+image_suite(void)
 {
 	Suite *s = suite_create("image");
 
@@ -44,15 +44,3 @@ mesh_suite(void)
 
 	return s;
 }
-
-int
-main(int argc, char *argv[])
-{
-	Suite *s = mesh_suite();
-	SRunner *sr = srunner_create(s);
-	srunner_run_all(sr, CK_NORMAL);
-	int failed = srunner_ntests_failed(sr);
-	srunner_free(sr);
-	return failed ? EXIT_FAILURE : EXIT_SUCCESS;
-}
-
