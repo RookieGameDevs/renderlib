@@ -11,6 +11,9 @@ Suite*
 mesh_suite(void);
 
 Suite*
+shader_suite(void);
+
+Suite*
 texture_suite(void);
 
 int
@@ -24,6 +27,7 @@ main(int argc, char *argv[])
 	srunner_add_suite(sr, font_suite());
 	srunner_add_suite(sr, image_suite());
 	srunner_add_suite(sr, mesh_suite());
+	srunner_add_suite(sr, shader_suite());
 	srunner_add_suite(sr, texture_suite());
 
 	// execute all suites
