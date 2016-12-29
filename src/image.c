@@ -29,14 +29,14 @@ read_png(
 	unsigned char hdr[hdr_size];
 
 	// open the given file
-	FILE *fp = fopen(filename, "rb");
+	FILE *fp = fopen(filename, "r");
 	if (!fp) {
 		err = ERR_NO_FILE;
 		goto error;
 	}
 
 	// attempt to read 8 bytes and check whether we're reading a PNG file
-	if (fread(hdr, 1, hdr_size, fp) < hdr_size ||
+	if (fread(hdr, 1, hdr_size, fp) != hdr_size ||
 	    png_sig_cmp(hdr, 0, hdr_size) != 0) {
 		err = ERR_BAD_FILE;
 		goto error;
@@ -138,7 +138,9 @@ read_png(
 cleanup:
 	free(rows);
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-	fclose(fp);
+	if (fp) {
+		fclose(fp);
+	}
 	return data;
 
 error:
