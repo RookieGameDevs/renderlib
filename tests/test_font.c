@@ -13,6 +13,7 @@ START_TEST(test_load_from_file)
 	font = font_from_file("data/notfound.ttf", 12, &err);
 	ck_assert(font == NULL);
 	ck_assert_int_ne(err, 0);
+	font_free(font);
 }
 END_TEST
 
