@@ -51,6 +51,12 @@ def configure(cfg):
         args='--libs --cflags',
         uselib_store='libpng')
 
+    # find freetype2
+    cfg.check_cfg(
+        package='freetype2',
+        args='--libs --cflags',
+        uselib_store='freetype')
+
     # find matlib
     cfg.check_cc(
         msg=u'Checking for matlib',
@@ -84,7 +90,7 @@ def configure(cfg):
 
 
 def build(bld):
-    deps = ['sdl', 'glew', 'libpng', 'matlib']
+    deps = ['sdl', 'glew', 'libpng', 'freetype', 'matlib']
     kwargs = {}
 
     if sys.platform.startswith('linux'):
