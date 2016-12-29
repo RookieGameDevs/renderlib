@@ -24,12 +24,6 @@ def configure(cfg):
     cfg.env.append_unique('CFLAGS', '-std=c99')
     cfg.env.append_unique('CFLAGS', '-Wall')
     cfg.env.append_unique('CFLAGS', '-Werror')
-    cfg.env.append_unique(
-        'INCLUDES',
-        cfg.path.find_dir('deps/matlib/build/include').abspath())
-    cfg.env.append_unique(
-        'LIBPATH',
-        cfg.path.find_dir('deps/matlib/build/lib').abspath())
 
     if cfg.options.build_type == 'debug':
         cfg.env.append_unique('CFLAGS', '-g')
@@ -57,6 +51,15 @@ def configure(cfg):
         args='--libs --cflags',
         uselib_store='libpng')
 
+    # find matlib
+    cfg.check_cc(
+        msg=u'Checking for matlib',
+        lib='mat',
+        header_file='matlib.h',
+        includes=[cfg.path.find_dir('deps/matlib/build/include').abspath()],
+        libpath=[cfg.path.find_dir('deps/matlib/build/lib').abspath()],
+        uselib_store='matlib')
+
     cfg.env.with_tests = cfg.options.with_tests
     if cfg.options.with_tests:
         cfg.check_cfg(
@@ -81,8 +84,7 @@ def configure(cfg):
 
 
 def build(bld):
-    deps = ['sdl', 'glew', 'libpng']
-    libs = ['mat']
+    deps = ['sdl', 'glew', 'libpng', 'matlib']
     kwargs = {}
 
     if sys.platform.startswith('linux'):
@@ -97,7 +99,6 @@ def build(bld):
         target='render',
         source=bld.path.ant_glob('src/**/*.c'),
         uselib=deps,
-        lib=libs,
         **kwargs)
 
     if bld.env.with_tests:
@@ -108,7 +109,7 @@ def build(bld):
                 source=[src],
                 includes=['src'],
                 uselib=deps + ['check'],
+                rpath=[bld.bldnode.abspath()],
                 use=['render'],
-                lib=libs,
                 **kwargs)
 
