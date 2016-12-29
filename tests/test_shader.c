@@ -43,8 +43,8 @@ END_TEST
 START_TEST(test_compile_glsl_files)
 {
 	struct Shader *shader = shader_compile(
-		"data/test.vert",
-		"data/test.frag",
+		"tests/data/test.vert",
+		"tests/data/test.frag",
 		NULL,
 		NULL,
 		NULL,

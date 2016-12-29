@@ -6,7 +6,7 @@
 
 START_TEST(test_create_from_image)
 {
-	struct Image *image = image_from_file("data/star.png", NULL);
+	struct Image *image = image_from_file("tests/data/star.png", NULL);
 	ck_assert(image != NULL);
 
 	struct Texture *tex = texture_from_image(image, GL_TEXTURE_RECTANGLE, NULL);
