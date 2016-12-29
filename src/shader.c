@@ -413,6 +413,7 @@ shader_new(struct ShaderSource **sources, unsigned count, err_t *r_err)
 		err = ERR_NO_MEM;
 		goto error;
 	}
+	memset(shader, 0, sizeof(struct Shader));
 	shader->prog = prog;
 
 	// initialize shader uniforms and uniform blocks tables
