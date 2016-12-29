@@ -9,6 +9,7 @@ START_TEST(test_load_from_file)
 	ck_assert(image != NULL);
 	ck_assert_uint_eq(image->width, 31);
 	ck_assert_uint_eq(image->height, 30);
+	ck_assert(image->data != NULL);
 	image_free(image);
 
 	err_t err = 0;

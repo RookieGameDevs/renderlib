@@ -152,7 +152,6 @@ image_from_file(const char *filename, err_t *r_err)
 	assert(filename != NULL);
 
 	struct Image *image = NULL;
-	void *data = NULL;
 	err_t err = 0;
 
 	// allocate image struct
@@ -162,41 +161,11 @@ image_from_file(const char *filename, err_t *r_err)
 	}
 
 	// read PNG image
-	data = read_png(filename, &image->width, &image->height, &err);
-	if (!data) {
+	image->data = read_png(filename, &image->width, &image->height, &err);
+	if (!image->data) {
 		goto error;
 	}
 
-	// create and initialize OpenGL image
-	glGenTextures(1, &image->hnd);
-	glBindTexture(GL_TEXTURE_RECTANGLE, image->hnd);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAX_LEVEL, 0);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(
-		GL_TEXTURE_RECTANGLE,
-		0,
-		GL_RGBA8,
-		image->width,
-		image->height,
-		0,
-		GL_RGBA,
-		GL_UNSIGNED_BYTE,
-		data
-	);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	if (glGetError() != GL_NO_ERROR || !image->hnd) {
-		err = ERR_OPENGL;
-		goto error;
-	}
-
-cleanup:
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	free(data);
 	return image;
 
 error:
@@ -204,15 +173,14 @@ error:
 		*r_err = err;
 	}
 	image_free(image);
-	image = NULL;
-	goto cleanup;
+	return NULL;
 }
 
 void
 image_free(struct Image *image)
 {
 	if (image) {
-		glDeleteTextures(1, &image->hnd);
+		free(image->data);
 		free(image);
 	}
 }

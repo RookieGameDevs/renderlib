@@ -1,15 +1,10 @@
 #pragma once
 
 #include "errors.h"
-#include <GL/glew.h>
-#include <stddef.h>
 
 struct Image {
-	GLuint hnd;
 	unsigned width, height;
-	struct Border {
-		uint8_t left, right, top, bottom;
-	} border;
+	void *data;
 };
 
 struct Image*
