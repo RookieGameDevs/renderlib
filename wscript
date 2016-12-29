@@ -51,6 +51,12 @@ def configure(cfg):
         args='--libs --cflags',
         uselib_store='glew')
 
+    # find libPNG
+    cfg.check_cfg(
+        package='libpng',
+        args='--libs --cflags',
+        uselib_store='libpng')
+
     cfg.env.with_tests = cfg.options.with_tests
     if cfg.options.with_tests:
         cfg.check_cfg(
@@ -75,7 +81,7 @@ def configure(cfg):
 
 
 def build(bld):
-    deps = ['sdl', 'glew']
+    deps = ['sdl', 'glew', 'libpng']
     libs = ['mat']
     kwargs = {}
 
