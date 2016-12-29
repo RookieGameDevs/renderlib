@@ -1,5 +1,6 @@
 #pragma once
 
+#include "errors.h"
 #include <GL/glew.h>
 #include <matlib.h>
 #include <stdbool.h>
@@ -68,7 +69,7 @@ struct AnimationInstance {
  * Create an instance of given animation.
  */
 struct AnimationInstance*
-animation_instance_new(struct Animation *anim, const char **r_err);
+animation_instance_new(struct Animation *anim, err_t *r_err);
 
 /**
  * Destroy animation instance.

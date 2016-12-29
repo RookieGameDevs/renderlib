@@ -3,18 +3,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ERR_IO "I/O error"
-#define ERR_NO_FILE "file not found"
-#define ERR_NO_MEM "out of memory"
-
 size_t
-file_read(const char *filename, char **r_buf, const char **r_err)
+file_read(const char *filename, char **r_buf, err_t *r_err)
 {
 	assert(filename != NULL);
 	assert(r_buf != NULL);
 
 	size_t size = 0;
-	const char *err = NULL;
+	err_t err = 0;
 
 	// open the file in binary read mode
 	FILE *fp = fopen(filename, "rb");

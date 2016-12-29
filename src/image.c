@@ -4,21 +4,15 @@
 #include <setjmp.h>
 #include <stdlib.h>
 
-#define ERR_NO_FILE "image file not found"
-#define ERR_BAD_FILE "bad image file"
-#define ERR_LIBPNG "libpng internal error"
-#define ERR_NO_MEM "out of memory"
-#define ERR_OPENGL "OpenGL error"
-
 static void*
 read_png(
 	const char *filename,
 	unsigned *r_width,
 	unsigned *r_height,
-	const char **r_err
+	err_t *r_err
 ) {
 	assert(filename != NULL);
-	const char *err = NULL;
+	err_t err = 0;
 
 	void *data = NULL;
 	png_structp png_ptr = NULL;
@@ -38,7 +32,7 @@ read_png(
 	// attempt to read 8 bytes and check whether we're reading a PNG file
 	if (fread(hdr, 1, hdr_size, fp) != hdr_size ||
 	    png_sig_cmp(hdr, 0, hdr_size) != 0) {
-		err = ERR_BAD_FILE;
+		err = ERR_INVALID_IMAGE;
 		goto error;
 	}
 
@@ -62,7 +56,7 @@ read_png(
 
 	// set the error handling longjmp point
 	if (setjmp(png_jmpbuf(png_ptr))) {
-		err = ERR_BAD_FILE;
+		err = ERR_INVALID_IMAGE;
 		goto error;
 	}
 
@@ -153,13 +147,13 @@ error:
 }
 
 struct Image*
-image_from_file(const char *filename, const char **r_err)
+image_from_file(const char *filename, err_t *r_err)
 {
 	assert(filename != NULL);
 
 	struct Image *image = NULL;
 	void *data = NULL;
-	const char *err = NULL;
+	err_t err = 0;
 
 	// allocate image struct
 	if (!(image = malloc(sizeof(struct Image)))) {

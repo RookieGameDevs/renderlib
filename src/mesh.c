@@ -2,6 +2,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "anim.h"
+#include "errors.h"
 #include "file_utils.h"
 #include "mesh.h"
 #include <assert.h>
@@ -33,10 +34,6 @@
 #define invoke(macro, ...) macro(__VA_ARGS__)
 #define cast(data, type, offset) (*(type*)(((char*)data) + offset))
 #define get_field(data, field) invoke(cast, data, field)
-
-#define ERR_BAD_DATA "bad mesh data"
-#define ERR_NO_MEM "out of memory"
-#define ERR_OPENGL "OpenGL error"
 
 enum {
 	VERTEX_ATTRIB_POSITION,
@@ -174,7 +171,7 @@ error:
 
 
 struct Mesh*
-mesh_from_file(const char *filename, const char **r_err)
+mesh_from_file(const char *filename, err_t *r_err)
 {
 	// read file contents into a buffer
 	char *data = NULL;
@@ -197,12 +194,12 @@ mesh_from_file(const char *filename, const char **r_err)
 
 
 struct Mesh*
-mesh_from_buffer(const char *data, size_t size, const char **r_err)
+mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 {
 	struct Mesh *m = NULL;
 	void *vertex_data = NULL;
 	void *index_data = NULL;
-	const char *err = NULL;
+	err_t err = 0;
 
 	// initialize mesh struct
 	if (!(m = malloc(sizeof(struct Mesh)))) {
@@ -214,7 +211,7 @@ mesh_from_buffer(const char *data, size_t size, const char **r_err)
 	// header sanity check
 	if (size < HEADER_SIZE ||
 	    get_field(data, VERSION_FIELD) != MESH_VERSION) {
-		err = ERR_BAD_DATA;
+		err = ERR_INVALID_MESH;
 		goto error;
 	}
 
@@ -225,7 +222,7 @@ mesh_from_buffer(const char *data, size_t size, const char **r_err)
 	if (!(m->vertex_format & VERTEX_HAS_POSITION) ||
 	    m->vertex_count == 0 ||
 	    m->index_count == 0) {
-		err = ERR_BAD_DATA;
+		err = ERR_INVALID_MESH;
 		goto error;
 	}
 
@@ -250,7 +247,7 @@ mesh_from_buffer(const char *data, size_t size, const char **r_err)
 	// initialize vertex data buffer
 	size_t vsize = m->vertex_count * m->vertex_size;
 	if (size < offset + vsize) {
-		err = ERR_BAD_DATA;
+		err = ERR_INVALID_MESH;
 		goto error;
 	}
 	if (!(vertex_data = malloc(vsize))) {
@@ -263,7 +260,7 @@ mesh_from_buffer(const char *data, size_t size, const char **r_err)
 	// initialize index data buffer
 	size_t isize = m->index_count * INDEX_SIZE;
 	if (size < offset + isize) {
-		err = ERR_BAD_DATA;
+		err = ERR_INVALID_MESH;
 		goto error;
 	}
 	if (!(index_data = malloc(isize))) {
@@ -278,7 +275,7 @@ mesh_from_buffer(const char *data, size_t size, const char **r_err)
 		size_t joint_count = get_field(data, JCOUNT_FIELD);
 		size_t jsize = joint_count * JOINT_SIZE;
 		if (size < offset + jsize) {
-			err = ERR_BAD_DATA;
+			err = ERR_INVALID_MESH;
 			goto error;
 		}
 
@@ -411,12 +408,12 @@ mesh_new(
 	size_t vertex_count,
 	uint32_t *indices,
 	size_t index_count,
-	const char **r_err
+	err_t *r_err
 ) {
 	assert(vertices != NULL && vertex_count >= 3);
 	assert(indices != NULL && index_count >= 3);
 
-	const char *err = NULL;
+	err_t err = 0;
 
 	// determine vertex format and size
 	int vertex_format = VERTEX_HAS_POSITION;

@@ -22,10 +22,10 @@ struct Mesh {
 };
 
 struct Mesh*
-mesh_from_file(const char *filename, const char **r_err);
+mesh_from_file(const char *filename, err_t *r_err);
 
 struct Mesh*
-mesh_from_buffer(const char *data, size_t data_size, const char **r_err);
+mesh_from_buffer(const char *data, size_t data_size, err_t *r_err);
 
 struct Mesh*
 mesh_new(
@@ -37,7 +37,7 @@ mesh_new(
 	size_t vertex_count,
 	uint32_t *indices,
 	size_t index_count,
-	const char **r_err
+	err_t *r_err
 );
 
 void

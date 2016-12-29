@@ -11,10 +11,10 @@ START_TEST(test_load_from_file)
 	ck_assert_uint_eq(image->height, 30);
 	image_free(image);
 
-	const char *err = NULL;
+	err_t err = 0;
 	image = image_from_file("data/notfound.png", &err);
 	ck_assert(image == NULL);
-	ck_assert(err != NULL);
+	ck_assert_int_eq(err, ERR_NO_FILE);
 }
 END_TEST
 

@@ -5,9 +5,6 @@
 
 #define ROOT_NODE_ID 255
 
-#define ERR_NO_MEM "out of memory"
-#define ERR_OPENGL "OpenGL error"
-
 /**
  * Find the skeleton key poses indices for given timestamp.
  */
@@ -121,9 +118,9 @@ joint_compute_pose(
 }
 
 struct AnimationInstance*
-animation_instance_new(struct Animation *anim, const char **r_err)
+animation_instance_new(struct Animation *anim, err_t *r_err)
 {
-	const char *err = NULL;
+	err_t err = 0;
 	struct AnimationInstance *inst = malloc(sizeof(struct AnimationInstance));
 	if (!inst) {
 		err = ERR_NO_MEM;

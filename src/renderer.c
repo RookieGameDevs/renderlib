@@ -9,14 +9,10 @@ static SDL_GLContext *context = NULL;
 static int initialized = 0;
 static int registered_at_exit = 0;
 
-#define ERR_SDL_INIT "SDL initialization error"
-#define ERR_OPENGL_INIT "OpenGL context creation error"
-#define ERR_GLEW_INIT "GLEW initialization error"
-
 int
-renderer_init(unsigned width, unsigned height, const char **r_err)
+renderer_init(unsigned width, unsigned height, err_t *r_err)
 {
-	const char *err = NULL;
+	err_t err = 0;
 
 	if (initialized) {
 		renderer_shutdown();
@@ -24,7 +20,7 @@ renderer_init(unsigned width, unsigned height, const char **r_err)
 
 	// initialize SDL video subsystem
 	if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_Init(SDL_INIT_VIDEO) != 0) {
-		err = ERR_SDL_INIT;
+		err = ERR_SDL;
 		goto error;
 	}
 
@@ -38,7 +34,7 @@ renderer_init(unsigned width, unsigned height, const char **r_err)
 		SDL_WINDOW_OPENGL
 	);
 	if (!window) {
-		err = ERR_SDL_INIT;
+		err = ERR_SDL;
 		goto error;
 	}
 
@@ -54,14 +50,14 @@ renderer_init(unsigned width, unsigned height, const char **r_err)
 
 	context = SDL_GL_CreateContext(window);
 	if (!context) {
-		err = ERR_OPENGL_INIT;
+		err = ERR_OPENGL;
 		goto error;
 	}
 
 	// initialize GLEW
 	glewExperimental = GL_TRUE;
 	if (glewInit() != 0) {
-		err = ERR_GLEW_INIT;
+		err = ERR_GLEW;
 		goto error;
 	}
 	glGetError(); // silence any errors produced during GLEW initialization
