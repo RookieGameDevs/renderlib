@@ -41,7 +41,6 @@ error:
 int
 renderer_present(void)
 {
-	// TODO
 	return 1;
 }
 
