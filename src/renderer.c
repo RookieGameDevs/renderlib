@@ -79,6 +79,9 @@ renderer_init(unsigned width, unsigned height, err_t *r_err)
 		atexit(renderer_shutdown);
 		registered_at_exit = 1;
 	}
+
+	initialized = 1;
+
 	return 1;
 
 error:

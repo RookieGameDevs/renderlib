@@ -9,8 +9,8 @@ START_TEST(test_draw_mesh)
 	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh", NULL);
 	Mat identity;
 	mat_ident(&identity);
-	int ok = draw_mesh(mesh, &identity, &identity, &identity);
-	ck_assert(ok);
+	ck_assert(draw_mesh(mesh, &mesh->transform, &identity, &identity));
+	ck_assert(renderer_present());
 	mesh_free(mesh);
 }
 END_TEST
