@@ -1,6 +1,7 @@
 #include "draw.h"
 #include "mesh.h"
 #include "shader.h"
+#include <assert.h>
 
 static struct ShaderUniform u_model;
 static struct ShaderUniform u_view;
@@ -40,6 +41,11 @@ draw_mesh(
 	Mat *view,
 	Mat *proj
 ) {
+	assert(mesh != NULL);
+	assert(model != NULL);
+	assert(view != NULL);
+	assert(proj != NULL);
+
 	int configured = (
 		shader_bind(shader) &&
 		shader_uniform_set(&u_model, 1, model) &&
