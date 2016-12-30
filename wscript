@@ -17,9 +17,17 @@ def options(opt):
         action='store_true',
         help='build tests')
 
+    opt.add_option(
+        '--with-demo',
+        action='store_true',
+        help='build demo app')
+
 
 def configure(cfg):
     cfg.load('compiler_c')
+
+    cfg.env.with_tests = cfg.options.with_tests
+    cfg.env.with_demo = cfg.options.with_demo
 
     cfg.env.append_unique('CFLAGS', '-std=c99')
     cfg.env.append_unique('CFLAGS', '-Wall')
@@ -66,7 +74,6 @@ def configure(cfg):
         libpath=[cfg.path.find_dir('deps/matlib/build/lib').abspath()],
         uselib_store='matlib')
 
-    cfg.env.with_tests = cfg.options.with_tests
     if cfg.options.with_tests:
         cfg.check_cfg(
             package='check',
@@ -102,18 +109,30 @@ def build(bld):
         kwargs['framework'] = ['OpenGL', 'Accelerate']
 
     bld.shlib(
-        target='render',
+        target='lib/render',
         source=bld.path.ant_glob('src/**/*.c'),
         uselib=deps,
         **kwargs)
 
+    rpath = bld.bldnode.find_or_declare('lib').abspath()
+    print(rpath)
+
     if bld.env.with_tests:
         bld.program(
-            target='test',
+            target='bin/tests',
             source=bld.path.ant_glob('tests/**/*.c'),
             includes=['src'],
             uselib=deps + ['check'],
-            rpath=[bld.bldnode.abspath()],
-            use=['render'],
+            rpath=[rpath],
+            use=['lib/render'],
             **kwargs)
 
+    if bld.env.with_demo:
+        bld.program(
+            target='bin/demo',
+            source=bld.path.ant_glob('demo/**/*.c'),
+            includes=['src'],
+            uselib=deps,
+            rpath=[rpath],
+            use=['lib/render'],
+            **kwargs)
