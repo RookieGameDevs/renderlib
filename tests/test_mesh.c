@@ -1,8 +1,9 @@
-#include "anim.h"
-#include "mesh.h"
-#include "renderer.h"
+#include "fixture.h"
 #include <check.h>
 #include <stdlib.h>
+
+#include "anim.h"
+#include "mesh.h"
 
 START_TEST(test_create_simple)
 {
@@ -50,18 +51,6 @@ START_TEST(test_create_from_file)
 	mesh_free(mesh);
 }
 END_TEST
-
-static void
-setup(void)
-{
-	ck_assert(renderer_init(800, 800, NULL));
-}
-
-static void
-teardown(void)
-{
-	renderer_shutdown();
-}
 
 Suite*
 mesh_suite(void)

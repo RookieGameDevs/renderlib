@@ -1,8 +1,9 @@
-#include "image.h"
-#include "renderer.h"
-#include "texture.h"
+#include "fixture.h"
 #include <check.h>
 #include <stdlib.h>
+
+#include "image.h"
+#include "texture.h"
 
 START_TEST(test_create_from_image)
 {
@@ -18,18 +19,6 @@ START_TEST(test_create_from_image)
 	texture_free(tex);
 }
 END_TEST
-
-static void
-setup(void)
-{
-	ck_assert(renderer_init(800, 800, NULL));
-}
-
-static void
-teardown(void)
-{
-	renderer_shutdown();
-}
 
 Suite*
 texture_suite(void)

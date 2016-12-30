@@ -40,13 +40,6 @@ def configure(cfg):
         cfg.env.append_unique('CFLAGS', '-O3')
         cfg.env.append_unique('DEFINES', 'NDEBUG')
 
-    # find SDL2
-    cfg.check_cfg(
-        path='sdl2-config',
-        args='--libs --cflags',
-        package='',
-        uselib_store='sdl')
-
     # find GLEW
     cfg.check_cfg(
         package='glew',
@@ -74,6 +67,14 @@ def configure(cfg):
         libpath=[cfg.path.find_dir('deps/matlib/build/lib').abspath()],
         uselib_store='matlib')
 
+    if cfg.options.with_tests or cfg.options.with_demo:
+        # find SDL2
+        cfg.check_cfg(
+            path='sdl2-config',
+            args='--libs --cflags',
+            package='',
+            uselib_store='sdl')
+
     if cfg.options.with_tests:
         cfg.check_cfg(
             package='check',
@@ -97,7 +98,7 @@ def configure(cfg):
 
 
 def build(bld):
-    deps = ['sdl', 'glew', 'libpng', 'freetype', 'matlib']
+    deps = ['glew', 'libpng', 'freetype', 'matlib']
     kwargs = {}
 
     if sys.platform.startswith('linux'):
@@ -122,7 +123,7 @@ def build(bld):
             target='bin/tests',
             source=bld.path.ant_glob('tests/**/*.c'),
             includes=['src'],
-            uselib=deps + ['check'],
+            uselib=deps + ['check', 'sdl'],
             rpath=[rpath],
             use=['lib/render'],
             **kwargs)
@@ -132,7 +133,7 @@ def build(bld):
             target='bin/demo',
             source=bld.path.ant_glob('demo/**/*.c'),
             includes=['src'],
-            uselib=deps,
+            uselib=deps + ['sdl'],
             rpath=[rpath],
             use=['lib/render'],
             **kwargs)

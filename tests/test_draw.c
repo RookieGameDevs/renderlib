@@ -1,8 +1,10 @@
+#include "fixture.h"
+#include <check.h>
+#include <stdlib.h>
+
 #include "draw.h"
 #include "mesh.h"
 #include "renderer.h"
-#include <check.h>
-#include <stdlib.h>
 
 START_TEST(test_draw_mesh)
 {
@@ -14,18 +16,6 @@ START_TEST(test_draw_mesh)
 	mesh_free(mesh);
 }
 END_TEST
-
-static void
-setup(void)
-{
-	ck_assert(renderer_init(800, 800, NULL));
-}
-
-static void
-teardown(void)
-{
-	renderer_shutdown();
-}
 
 Suite*
 draw_suite(void)

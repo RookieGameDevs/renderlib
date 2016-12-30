@@ -1,7 +1,8 @@
-#include "shader.h"
-#include "renderer.h"
+#include "fixture.h"
 #include <check.h>
 #include <stdlib.h>
+
+#include "shader.h"
 
 START_TEST(test_compile_string)
 {
@@ -56,18 +57,6 @@ START_TEST(test_compile_glsl_files)
 	shader_free(shader);
 }
 END_TEST
-
-static void
-setup(void)
-{
-	ck_assert(renderer_init(800, 800, NULL));
-}
-
-static void
-teardown(void)
-{
-	renderer_shutdown();
-}
 
 Suite*
 shader_suite(void)

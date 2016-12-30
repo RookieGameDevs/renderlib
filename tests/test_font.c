@@ -1,7 +1,8 @@
-#include "font.h"
-#include "renderer.h"
+#include "fixture.h"
 #include <check.h>
 #include <stdlib.h>
+
+#include "font.h"
 
 START_TEST(test_load_from_file)
 {
@@ -16,18 +17,6 @@ START_TEST(test_load_from_file)
 	font_free(font);
 }
 END_TEST
-
-static void
-setup(void)
-{
-	ck_assert(renderer_init(800, 800, NULL));
-}
-
-static void
-teardown(void)
-{
-	renderer_shutdown();
-}
 
 Suite*
 font_suite(void)

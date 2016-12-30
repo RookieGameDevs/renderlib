@@ -1,7 +1,8 @@
-#include "image.h"
-#include "renderer.h"
+#include "fixture.h"
 #include <check.h>
 #include <stdlib.h>
+
+#include "image.h"
 
 START_TEST(test_load_from_file)
 {
@@ -18,18 +19,6 @@ START_TEST(test_load_from_file)
 	ck_assert_int_eq(err, ERR_NO_FILE);
 }
 END_TEST
-
-static void
-setup(void)
-{
-	ck_assert(renderer_init(800, 800, NULL));
-}
-
-static void
-teardown(void)
-{
-	renderer_shutdown();
-}
 
 Suite*
 image_suite(void)

@@ -3,7 +3,7 @@
 #include "errors.h"
 
 int
-renderer_init(unsigned width, unsigned height, err_t *r_err);
+renderer_init(err_t *r_err);
 
 int
 renderer_present(void);
