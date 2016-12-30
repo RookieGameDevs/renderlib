@@ -1,5 +1,6 @@
 #pragma once
 
+#include "errors.h"
 #include <GL/glew.h>
 #include <matlib.h>
 #include <stddef.h>

@@ -521,7 +521,7 @@ shader_bind(struct Shader *s)
 	glUseProgram(s->prog);
 
 #ifdef DEBUG
-	return glGetError() != GL_NO_ERROR;
+	return glGetError() == GL_NO_ERROR;
 #endif
 
 	return 1;
@@ -669,7 +669,7 @@ shader_uniform_set(const struct ShaderUniform *uniform, size_t count, ...)
 	va_end(ap);
 
 #ifdef DEBUG
-	return glGetError() != GL_NO_ERROR;
+	return glGetError() == GL_NO_ERROR;
 #endif
 	return 1;
 }

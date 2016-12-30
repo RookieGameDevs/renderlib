@@ -9,6 +9,10 @@ static SDL_GLContext *context = NULL;
 static int initialized = 0;
 static int registered_at_exit = 0;
 
+// defined in draw.c
+int
+init_mesh_pipeline(err_t *r_err);
+
 int
 renderer_init(unsigned width, unsigned height, err_t *r_err)
 {
@@ -62,7 +66,15 @@ renderer_init(unsigned width, unsigned height, err_t *r_err)
 	}
 	glGetError(); // silence any errors produced during GLEW initialization
 
-	initialized = 1;
+	// initialize pipelines
+	int ok = (
+		init_mesh_pipeline(&err)
+	);
+
+	if (!ok) {
+		goto error;
+	}
+
 	if (!registered_at_exit) {
 		atexit(renderer_shutdown);
 		registered_at_exit = 1;
