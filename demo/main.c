@@ -8,7 +8,6 @@
 // renderlib headers
 #include "renderer.h"
 #include "mesh.h"
-#include "draw.h"
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -117,19 +116,18 @@ render(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Mat model, view;
-	mat_ident(&model);
-	mat_ident(&view);
-	mat_translate(&view, 0, 0, -500);
+	struct MeshRenderProps props = {
+		.cast_shadows = 1,
+		.receive_shadows = 1,
+		.projection = camera.projection
+	};
+	mat_ident(&props.model);
+	mat_ident(&props.view);
+	mat_translate(&props.view, 0, 0, -500);
 
-	int ok = draw_mesh(
-		mesh,
-		&model,
-		&view,
-		&camera.projection
-	);
+	int ok = render_mesh(mesh, &props, NULL);
 
-	renderer_present();
+	renderer_present(NULL);
 	SDL_GL_SwapWindow(window);
 	return ok;
 }

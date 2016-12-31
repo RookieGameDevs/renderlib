@@ -2,9 +2,6 @@
 #include <stdlib.h>
 
 Suite*
-draw_suite(void);
-
-Suite*
 font_suite(void);
 
 Suite*
@@ -12,6 +9,9 @@ image_suite(void);
 
 Suite*
 mesh_suite(void);
+
+Suite*
+render_suite(void);
 
 Suite*
 shader_suite(void);
@@ -27,10 +27,10 @@ main(int argc, char *argv[])
 	SRunner *sr = srunner_create(s);
 
 	// add external suites
-	srunner_add_suite(sr, draw_suite());
 	srunner_add_suite(sr, font_suite());
 	srunner_add_suite(sr, image_suite());
 	srunner_add_suite(sr, mesh_suite());
+	srunner_add_suite(sr, render_suite());
 	srunner_add_suite(sr, shader_suite());
 	srunner_add_suite(sr, texture_suite());
 
