@@ -6,8 +6,9 @@
 #include <time.h>
 
 // renderlib headers
-#include "renderer.h"
+#include "anim.h"
 #include "mesh.h"
+#include "renderer.h"
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -20,7 +21,12 @@ static struct {
 	Mat projection;
 } camera;
 
+static struct {
+	int play_animation;
+} controls;
+
 static struct Mesh *mesh = NULL;
+static struct AnimationInstance *animation = NULL;
 
 static int
 init(unsigned width, unsigned height)
@@ -73,6 +79,9 @@ init(unsigned width, unsigned height)
 		1000
 	);
 
+	// initialize controls
+	controls.play_animation = 0;
+
 	return renderer_init(NULL);
 }
 
@@ -103,11 +112,24 @@ update(float dt)
 {
 	SDL_Event evt;
 	while (SDL_PollEvent(&evt)) {
-		if (evt.type == SDL_QUIT ||
-		    (evt.type == SDL_KEYDOWN && evt.key.keysym.sym == SDLK_ESCAPE)) {
+		if (evt.type == SDL_QUIT) {
 			return 0;
+		} else if (evt.type == SDL_KEYUP) {
+			switch (evt.key.keysym.sym) {
+			case SDLK_ESCAPE:
+				return 0;
+			case SDLK_SPACE:
+				controls.play_animation = !controls.play_animation;
+				break;
+			}
 		}
 	}
+
+	// play animation
+	if (controls.play_animation) {
+		animation_instance_play(animation, dt);
+	}
+
 	return 1;
 }
 
@@ -119,7 +141,9 @@ render(void)
 	struct MeshRenderProps props = {
 		.cast_shadows = 1,
 		.receive_shadows = 1,
-		.projection = camera.projection
+		.projection = camera.projection,
+		.enable_animation = 1,
+		.animation = animation
 	};
 	mat_ident(&props.model);
 	mat_ident(&props.view);
@@ -135,7 +159,8 @@ render(void)
 static int
 load_resources(void)
 {
-	if (!(mesh = mesh_from_file("tests/data/zombie.mesh", NULL))) {
+	if (!(mesh = mesh_from_file("tests/data/zombie.mesh", NULL)) ||
+	    !(animation = animation_instance_new(&mesh->animations[0], NULL))) {
 		return 0;
 	}
 	return 1;
@@ -144,6 +169,7 @@ load_resources(void)
 static void
 cleanup_resources(void)
 {
+	animation_instance_free(animation);
 	mesh_free(mesh);
 }
 

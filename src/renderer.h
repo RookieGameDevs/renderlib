@@ -27,9 +27,11 @@ renderer_shutdown(void);
  * Mesh render properties.
  */
 struct MeshRenderProps {
-	Mat model, view, projection;  // transforms
-	int cast_shadows;             // should cast shadows
-	int receive_shadows;          // should receive shadows
+	Mat model, view, projection;         // transforms
+	int cast_shadows;                    // should cast shadows
+	int receive_shadows;                 // should receive shadows
+	int enable_animation;                // should apply animation
+	struct AnimationInstance *animation; // animation instance
 };
 
 /**

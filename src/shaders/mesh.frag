@@ -2,29 +2,24 @@
 
 in vec3 position;
 in vec3 normal;
-//in vec2 uv;
+in vec2 uv;
 
-#ifdef ENABLE_SHADOW_MAPPING
+out vec4 color;
+
+/*** LIGTHING ***/
+uniform bool enable_lighting = false;
 in vec4 light_space_position;
-#endif
-
-#ifdef ENABLE_LIGHTING
-struct Light {
+uniform vec3 eye;
+uniform struct Light {
 	vec3 direction;
 	vec3 color;
 	float ambient_intensity;
 	float diffuse_intensity;
-};
-
-uniform Light light;
-uniform vec3 eye;
-
-struct Material {
+} light;
+uniform struct Material {
 	float specular_intensity;
 	float specular_power;
-};
-
-uniform Material material;
+} material;
 
 void apply_lighting(
 	inout vec4 color,
@@ -61,9 +56,9 @@ void apply_lighting(
 
 	color *= (ambient + diffuse + specular);
 }
-#endif
 
-#ifdef ENABLE_SHADOW_MAPPING
+/*** SHADOW MAPPING ***/
+uniform bool enable_shadow_mapping = false;
 uniform sampler2D shadow_map;
 
 void apply_shadow(inout vec4 color, sampler2D shadow_map, vec4 position)
@@ -75,19 +70,16 @@ void apply_shadow(inout vec4 color, sampler2D shadow_map, vec4 position)
 		color *= 0.5;
 	}
 }
-#endif
-
-out vec4 color;
 
 void main()
 {
 	color = vec4(1.0);
 
-#ifdef ENABLE_LIGHTING
-	apply_lighting(color, light, material, eye, position, normal);
-#endif
+	if (enable_lighting) {
+		apply_lighting(color, light, material, eye, position, normal);
+	}
 
-#ifdef ENABLE_SHADOW_MAPPING
-	apply_shadow(color, shadow_map, light_space_position);
-#endif
+	if (enable_shadow_mapping) {
+		apply_shadow(color, shadow_map, light_space_position);
+	}
 }

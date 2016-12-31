@@ -1,7 +1,6 @@
 #pragma once
 
 #include "errors.h"
-#include <GL/glew.h>
 #include <matlib.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -62,7 +61,6 @@ struct AnimationInstance {
 	Mat *joint_transforms;   // local joint transformations
 	Mat *skin_transforms;    // final skinning transformations
 	bool *processed_joints;  // joint processing flags (private)
-	GLuint uniform_buffer;   // uniform buffer holding skin transforms
 };
 
 /**

@@ -1,11 +1,26 @@
+#include "anim.h"
 #include "mesh.h"
+#include "renderer.h"
 #include "shader.h"
 #include <assert.h>
+#include <stdlib.h>
 
 static struct ShaderUniform u_model;
 static struct ShaderUniform u_view;
 static struct ShaderUniform u_projection;
+static struct ShaderUniform u_enable_skinning;
+static struct ShaderUniformBlock ub_skin_transforms;
+static struct ShaderUniform u_skin_transforms;
 static struct Shader *shader = NULL;
+
+static GLuint skin_transforms_buffer = 0;
+
+static void
+cleanup(void)
+{
+	shader_free(shader);
+	glDeleteBuffers(1, &skin_transforms_buffer);
+}
 
 int
 init_mesh_pipeline(err_t *r_err)
@@ -14,42 +29,130 @@ init_mesh_pipeline(err_t *r_err)
 		"model",
 		"view",
 		"projection",
+		"enable_skinning",
 		NULL
 	};
 	struct ShaderUniform *uniforms[] = {
 		&u_model,
 		&u_view,
-		&u_projection
+		&u_projection,
+		&u_enable_skinning,
+	};
+
+	const char *uniform_block_names[] = {
+		"SkinTransforms",
+		NULL
+	};
+	struct ShaderUniformBlock *uniform_blocks[] = {
+		&ub_skin_transforms
 	};
 	shader = shader_compile(
 		"src/shaders/mesh.vert",
 		"src/shaders/mesh.frag",
 		uniform_names,
 		uniforms,
-		NULL,
-		NULL,
+		uniform_block_names,
+		uniform_blocks,
 		r_err
 	);
-	return shader != NULL;
+
+	u_skin_transforms = *shader_uniform_block_get_uniform(
+		&ub_skin_transforms,
+		"skin_transforms[0]"
+	);
+
+	// allocate an OpenGL buffer for animation uniform block
+	glGenBuffers(1, &skin_transforms_buffer);
+	if (!skin_transforms_buffer) {
+		*r_err = ERR_OPENGL;
+	}
+
+	// initialize buffer storage
+	glBindBuffer(GL_UNIFORM_BUFFER, skin_transforms_buffer);
+	glBufferData(
+		GL_UNIFORM_BUFFER,
+		ub_skin_transforms.size,
+		NULL,
+		GL_DYNAMIC_DRAW
+	);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	// cleanup resources at program exit
+	atexit(cleanup);
+
+	return shader && skin_transforms_buffer;
+}
+
+static int
+configure_skinning(int enable_animation, struct AnimationInstance *inst)
+{
+	// configure uniforms
+	int configured = shader_uniform_set(
+		&u_enable_skinning,
+		1,
+		&enable_animation
+
+	);
+	if (!enable_animation) {
+		return configured;
+	}
+
+	// update skin transforms buffer data
+	glBindBuffer(GL_UNIFORM_BUFFER, skin_transforms_buffer);
+	struct Animation *anim = inst->anim;
+	Mat *dst = glMapBufferRange(
+		GL_UNIFORM_BUFFER,
+		u_skin_transforms.offset,
+		u_skin_transforms.size,
+		(
+			GL_MAP_WRITE_BIT |
+			GL_MAP_INVALIDATE_BUFFER_BIT |
+			GL_MAP_UNSYNCHRONIZED_BIT
+		)
+	);
+	if (!dst || glGetError() != GL_NO_ERROR) {
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		return 0;
+	}
+	Mat tmp;
+	for (int j = 0; j < anim->skeleton->joint_count; j++) {
+		mat_mul(
+			&inst->joint_transforms[j],
+			&anim->skeleton->joints[j].inv_bind_pose,
+			&tmp
+		);
+		mat_transpose(&tmp, &dst[j]);
+	}
+	glUnmapBuffer(GL_UNIFORM_BUFFER);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	// perform indexed buffer binding
+	GLuint binding_index = 1;
+	glBindBufferBase(
+		GL_UNIFORM_BUFFER,
+		binding_index,
+		skin_transforms_buffer
+	);
+	glUniformBlockBinding(
+		shader->prog,
+		ub_skin_transforms.index,
+		binding_index
+	);
+
+	return glGetError() == GL_NO_ERROR;
 }
 
 int
-draw_mesh(
-	struct Mesh *mesh,
-	Mat *model,
-	Mat *view,
-	Mat *proj
-) {
+draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 	assert(mesh != NULL);
-	assert(model != NULL);
-	assert(view != NULL);
-	assert(proj != NULL);
+	assert(props != NULL);
 
 	int configured = (
 		shader_bind(shader) &&
-		shader_uniform_set(&u_model, 1, model) &&
-		shader_uniform_set(&u_view, 1, view) &&
-		shader_uniform_set(&u_projection, 1, proj)
+		shader_uniform_set(&u_model, 1, &props->model) &&
+		shader_uniform_set(&u_view, 1, &props->view) &&
+		shader_uniform_set(&u_projection, 1, &props->projection) &&
+		configure_skinning(props->enable_animation, props->animation)
 	);
 
 	if (!configured) {

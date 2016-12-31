@@ -19,12 +19,7 @@ int
 init_mesh_pipeline(err_t *r_err);
 
 int
-draw_mesh(
-	struct Mesh *mesh,
-	Mat *model,
-	Mat *view,
-	Mat *proj
-);
+draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
 
 static int
 render_queue_push(const struct RenderOp *op)
@@ -47,13 +42,7 @@ render_queue_exec(void)
 {
 	for (int i = 0; i < render_queue.len; i++) {
 		struct RenderOp *op = &render_queue.queue[i];
-		int ok = draw_mesh(
-			op->mesh,
-			&op->props.model,
-			&op->props.view,
-			&op->props.projection
-		);
-		if (!ok) {
+		if (!draw_mesh(op->mesh, &op->props)) {
 			return 0;
 		}
 	}

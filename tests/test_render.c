@@ -15,7 +15,8 @@ START_TEST(test_render_mesh_simple)
 	struct MeshRenderProps props = {
 		.view = identity,
 		.model = identity,
-		.projection = identity
+		.projection = identity,
+		.enable_animation = 0
 	};
 	ck_assert(render_mesh(mesh, &props, NULL));
 	ck_assert(renderer_present(NULL));

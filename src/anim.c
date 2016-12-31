@@ -138,30 +138,10 @@ animation_instance_new(struct Animation *anim, err_t *r_err)
 		goto error;
 	}
 
-	for (size_t i = 0; i < n_joints; i++) {
-		mat_ident(inst->joint_transforms + i);
-		mat_ident(inst->skin_transforms + i);
-	}
-
 	inst->anim = anim;
 	inst->time = 0.0f;
 
-	// allocate an OpenGL buffer for animation uniform block
-	glGenBuffers(1, &inst->uniform_buffer);
-	if (!inst->uniform_buffer) {
-		err = ERR_OPENGL;
-		goto error;
-	}
-	glBindBuffer(GL_UNIFORM_BUFFER, inst->uniform_buffer);
-	/* TODO: uncomment this
-	glBufferData(
-		GL_UNIFORM_BUFFER,
-		ub_animation->size,
-		inst->skin_transforms,
-		GL_DYNAMIC_DRAW
-	);
-	*/
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	animation_instance_play(inst, 0.0f);
 
 	return inst;
 
@@ -177,7 +157,6 @@ void
 animation_instance_free(struct AnimationInstance *inst)
 {
 	if (inst) {
-		glDeleteBuffers(1, &inst->uniform_buffer);
 		free(inst->joint_transforms);
 		free(inst->skin_transforms);
 		free(inst->processed_joints);
@@ -229,37 +208,6 @@ animation_instance_play(struct AnimationInstance *inst, float dt)
 			);
 		}
 	}
-
-	/* TODO: uncomment this
-	// compute skinning matrices for each joint and store the results into
-	// uniform buffer
-	glBindBuffer(GL_UNIFORM_BUFFER, inst->uniform_buffer);
-	Mat *skin_transforms = glMapBufferRange(
-		GL_UNIFORM_BUFFER,
-		u_skin_transforms->offset,
-		u_skin_transforms->size,
-		(
-			GL_MAP_WRITE_BIT |
-			GL_MAP_INVALIDATE_BUFFER_BIT |
-			GL_MAP_UNSYNCHRONIZED_BIT
-		)
-	);
-	if (!skin_transforms || glGetError() != GL_NO_ERROR) {
-		err("failed to map animation block uniform buffer");
-		return 0;
-	}
-	Mat tmp;
-	for (int j = 0; j < n_joints; j++) {
-		mat_mul(
-			&inst->joint_transforms[j],
-			&anim->skeleton->joints[j].inv_bind_pose,
-			&tmp
-		);
-		mat_transpose(&tmp, &skin_transforms[j]);
-	}
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	*/
 
 	return 1;
 }
