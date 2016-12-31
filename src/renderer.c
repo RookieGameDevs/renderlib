@@ -114,11 +114,7 @@ renderer_shutdown(void)
 }
 
 int
-render_mesh(
-	struct Mesh *mesh,
-	struct MeshRenderProps *props,
-	err_t *r_err
-) {
+render_mesh(struct Mesh *mesh, struct MeshRenderProps *props, err_t *r_err) {
 	struct RenderOp op = {
 		.mesh = mesh,
 		.props = *props
