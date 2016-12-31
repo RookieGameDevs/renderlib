@@ -29,8 +29,7 @@ START_TEST(test_create_simple)
 		NULL,
 		3,
 		indices,
-		3,
-		NULL
+		3
 	);
 	ck_assert(mesh != NULL);
 	ck_assert_int_eq(mesh->vertex_count, 3);
@@ -42,7 +41,7 @@ END_TEST
 
 START_TEST(test_create_from_file)
 {
-	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh", NULL);
+	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh");
 	ck_assert(mesh != NULL);
 	ck_assert_int_eq(mesh->vertex_count, 37368);
 	ck_assert_int_eq(mesh->index_count, 37368);

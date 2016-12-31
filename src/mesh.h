@@ -1,6 +1,5 @@
 #pragma once
 
-#include "errors.h"
 #include <GL/glew.h>
 #include <matlib.h>
 #include <stddef.h>
@@ -23,10 +22,10 @@ struct Mesh {
 };
 
 struct Mesh*
-mesh_from_file(const char *filename, err_t *r_err);
+mesh_from_file(const char *filename);
 
 struct Mesh*
-mesh_from_buffer(const char *data, size_t data_size, err_t *r_err);
+mesh_from_buffer(const char *data, size_t data_size);
 
 struct Mesh*
 mesh_new(
@@ -37,8 +36,7 @@ mesh_new(
 	uint8_t joint_weights[][4],
 	size_t vertex_count,
 	uint32_t *indices,
-	size_t index_count,
-	err_t *r_err
+	size_t index_count
 );
 
 void

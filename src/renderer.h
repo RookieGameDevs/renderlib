@@ -1,6 +1,6 @@
 #pragma once
 
-#include "errors.h"
+#include "error.h"
 #include <matlib.h>
 
 struct Mesh;
@@ -9,13 +9,13 @@ struct Mesh;
  * Initialize renderer library.
  */
 int
-renderer_init(err_t *r_err);
+renderer_init(void);
 
 /**
  * Render current render queue and flush it.
  */
 int
-renderer_present(err_t *r_err);
+renderer_present(void);
 
 /**
  * Shutdown renderer library and free resources.
@@ -38,4 +38,4 @@ struct MeshRenderProps {
  * Add a mesh to render queue.
  */
 int
-render_mesh(struct Mesh *mesh, struct MeshRenderProps *props, err_t *r_err);
+render_mesh(struct Mesh *mesh, struct MeshRenderProps *props);

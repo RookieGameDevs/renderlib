@@ -3,7 +3,6 @@
  *****************************************************************************/
 #pragma once
 
-#include "errors.h"
 #include <GL/glew.h>
 #include <stddef.h>
 
@@ -15,10 +14,10 @@ struct ShaderSource {
 };
 
 struct ShaderSource*
-shader_source_from_string(const char *source, GLenum type, err_t *r_err);
+shader_source_from_string(const char *source, GLenum type);
 
 struct ShaderSource*
-shader_source_from_file(const char *filename, err_t *r_err);
+shader_source_from_file(const char *filename);
 
 void
 shader_source_free(struct ShaderSource *ss);
@@ -58,7 +57,7 @@ struct Shader {
 };
 
 struct Shader*
-shader_new(struct ShaderSource **sources, unsigned count, err_t *r_err);
+shader_new(struct ShaderSource **sources, unsigned count);
 
 struct Shader*
 shader_compile(
@@ -67,8 +66,7 @@ shader_compile(
 	const char *uniform_names[],
 	struct ShaderUniform *r_uniforms[],
 	const char *uniform_block_names[],
-	struct ShaderUniformBlock *r_uniform_blocks[],
-	err_t *r_err
+	struct ShaderUniformBlock *r_uniform_blocks[]
 );
 
 void

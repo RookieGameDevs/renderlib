@@ -1,4 +1,5 @@
 #include "anim.h"
+#include "error.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -118,13 +119,12 @@ joint_compute_pose(
 }
 
 struct AnimationInstance*
-animation_instance_new(struct Animation *anim, err_t *r_err)
+animation_instance_new(struct Animation *anim)
 {
-	err_t err = 0;
 	struct AnimationInstance *inst = malloc(sizeof(struct AnimationInstance));
 	if (!inst) {
-		err = ERR_NO_MEM;
-		goto error;
+		err(ERR_NO_MEM);
+		return 0;
 	}
 
 	size_t n_joints = anim->skeleton->joint_count;
@@ -134,8 +134,8 @@ animation_instance_new(struct Animation *anim, err_t *r_err)
 	if (inst->joint_transforms == NULL ||
 	    inst->skin_transforms == NULL ||
 	    inst->processed_joints == NULL) {
-		err = ERR_NO_MEM;
-		goto error;
+		err(ERR_NO_MEM);
+		animation_instance_free(inst);
 	}
 
 	inst->anim = anim;
@@ -144,13 +144,6 @@ animation_instance_new(struct Animation *anim, err_t *r_err)
 	animation_instance_play(inst, 0.0f);
 
 	return inst;
-
-error:
-	if (r_err) {
-		*r_err = err;
-	}
-	animation_instance_free(inst);
-	return NULL;
 }
 
 void

@@ -1,20 +1,19 @@
+#include "error.h"
 #include "image.h"
 #include "texture.h"
 #include <assert.h>
 #include <stdlib.h>
 
 struct Texture*
-texture_from_image(struct Image *image, GLenum type, err_t *r_err)
+texture_from_image(struct Image *image, GLenum type)
 {
 	assert(image != NULL);
 	assert(type == GL_TEXTURE_2D || type == GL_TEXTURE_RECTANGLE);
 
-	err_t err = 0;
-
 	// alloc Texture struct
 	struct Texture *tex = malloc(sizeof(struct Texture));
 	if (!tex) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	tex->type = type;
@@ -22,7 +21,7 @@ texture_from_image(struct Image *image, GLenum type, err_t *r_err)
 	// create OpenGL texture object
 	glGenTextures(1, &tex->id);
 	if (!tex->id) {
-		err = ERR_OPENGL;
+		err(ERR_OPENGL);
 		goto error;
 	}
 
@@ -50,7 +49,7 @@ texture_from_image(struct Image *image, GLenum type, err_t *r_err)
 
 	// check for any OpenGL errors
 	if (glGetError() != GL_NO_ERROR) {
-		err = ERR_OPENGL;
+		err(ERR_OPENGL);
 		goto error;
 	}
 
@@ -60,9 +59,6 @@ cleanup:
 	return tex;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	texture_free(tex);
 	tex = NULL;
 	goto cleanup;

@@ -6,17 +6,15 @@
 
 START_TEST(test_load_from_file)
 {
-	struct Image *image = image_from_file("tests/data/star.png", NULL);
+	struct Image *image = image_from_file("tests/data/star.png");
 	ck_assert(image != NULL);
 	ck_assert_uint_eq(image->width, 31);
 	ck_assert_uint_eq(image->height, 30);
 	ck_assert(image->data != NULL);
 	image_free(image);
 
-	err_t err = 0;
-	image = image_from_file("notfound.png", &err);
+	image = image_from_file("notfound.png");
 	ck_assert(image == NULL);
-	ck_assert_int_eq(err, ERR_NO_FILE);
 }
 END_TEST
 

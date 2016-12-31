@@ -15,8 +15,7 @@ START_TEST(test_compile_string)
 
 	struct ShaderSource *vert_source = shader_source_from_string(
 		vert,
-		GL_VERTEX_SHADER,
-		NULL
+		GL_VERTEX_SHADER
 	);
 	ck_assert(vert_source != NULL);
 	ck_assert_int_ne(vert_source->src, 0);
@@ -32,8 +31,7 @@ START_TEST(test_compile_string)
 
 	struct ShaderSource *frag_source = shader_source_from_string(
 		frag,
-		GL_FRAGMENT_SHADER,
-		NULL
+		GL_FRAGMENT_SHADER
 	);
 	ck_assert(frag_source != NULL);
 	ck_assert_int_ne(frag_source->src, 0);
@@ -46,7 +44,6 @@ START_TEST(test_compile_glsl_files)
 	struct Shader *shader = shader_compile(
 		"tests/data/test.vert",
 		"tests/data/test.frag",
-		NULL,
 		NULL,
 		NULL,
 		NULL,

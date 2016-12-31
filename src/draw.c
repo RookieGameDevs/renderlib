@@ -23,8 +23,12 @@ cleanup(void)
 }
 
 int
-init_mesh_pipeline(err_t *r_err)
+init_mesh_pipeline(void)
 {
+	// cleanup resources at program exit
+	atexit(cleanup);
+
+	// uniform names and receiver pointers
 	const char *uniform_names[] = {
 		"model",
 		"view",
@@ -39,6 +43,7 @@ init_mesh_pipeline(err_t *r_err)
 		&u_enable_skinning,
 	};
 
+	// uniform block names and receiver pointers
 	const char *uniform_block_names[] = {
 		"SkinTransforms",
 		NULL
@@ -46,25 +51,35 @@ init_mesh_pipeline(err_t *r_err)
 	struct ShaderUniformBlock *uniform_blocks[] = {
 		&ub_skin_transforms
 	};
+
+	// compile mesh pipeline shader and initialize uniforms
 	shader = shader_compile(
 		"src/shaders/mesh.vert",
 		"src/shaders/mesh.frag",
 		uniform_names,
 		uniforms,
 		uniform_block_names,
-		uniform_blocks,
-		r_err
+		uniform_blocks
 	);
+	if (!shader) {
+		return 0;
+	}
 
-	u_skin_transforms = *shader_uniform_block_get_uniform(
+	// lookup skin transforms array uniform within the uniform block
+	const struct ShaderUniform *u = shader_uniform_block_get_uniform(
 		&ub_skin_transforms,
 		"skin_transforms[0]"
 	);
+	if (!u) {
+		return 0;
+	}
+	u_skin_transforms = *u;
 
 	// allocate an OpenGL buffer for animation uniform block
 	glGenBuffers(1, &skin_transforms_buffer);
 	if (!skin_transforms_buffer) {
-		*r_err = ERR_OPENGL;
+		err(ERR_OPENGL);
+		return 0;
 	}
 
 	// initialize buffer storage
@@ -77,10 +92,13 @@ init_mesh_pipeline(err_t *r_err)
 	);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	// cleanup resources at program exit
-	atexit(cleanup);
+	// check for any OpenGL-related errors
+	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
+		return 0;
+	}
 
-	return shader && skin_transforms_buffer;
+	return 1;
 }
 
 static int
@@ -91,7 +109,6 @@ configure_skinning(int enable_animation, struct AnimationInstance *inst)
 		&u_enable_skinning,
 		1,
 		&enable_animation
-
 	);
 	if (!enable_animation) {
 		return configured;
@@ -112,6 +129,7 @@ configure_skinning(int enable_animation, struct AnimationInstance *inst)
 	);
 	if (!dst || glGetError() != GL_NO_ERROR) {
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		err(ERR_OPENGL);
 		return 0;
 	}
 	Mat tmp;
@@ -139,7 +157,12 @@ configure_skinning(int enable_animation, struct AnimationInstance *inst)
 		binding_index
 	);
 
-	return glGetError() == GL_NO_ERROR;
+	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
+		return 0;
+	}
+
+	return 1;
 }
 
 int
@@ -154,7 +177,6 @@ draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 		shader_uniform_set(&u_projection, 1, &props->projection) &&
 		configure_skinning(props->enable_animation, props->animation)
 	);
-
 	if (!configured) {
 		return 0;
 	}
@@ -168,7 +190,10 @@ draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 	);
 
 #ifdef DEBUG
-	return glGetError() == GL_NO_ERROR;
+	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
+		return 0;
+	}
 #endif
 	return 1;
 }

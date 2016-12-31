@@ -82,7 +82,7 @@ init(unsigned width, unsigned height)
 	// initialize controls
 	controls.play_animation = 0;
 
-	return renderer_init(NULL);
+	return renderer_init();
 }
 
 static void
@@ -149,9 +149,9 @@ render(void)
 	mat_ident(&props.view);
 	mat_translate(&props.view, 0, 0, -500);
 
-	int ok = render_mesh(mesh, &props, NULL);
+	int ok = render_mesh(mesh, &props);
 
-	renderer_present(NULL);
+	renderer_present();
 	SDL_GL_SwapWindow(window);
 	return ok;
 }
@@ -159,8 +159,8 @@ render(void)
 static int
 load_resources(void)
 {
-	if (!(mesh = mesh_from_file("tests/data/zombie.mesh", NULL)) ||
-	    !(animation = animation_instance_new(&mesh->animations[0], NULL))) {
+	if (!(mesh = mesh_from_file("tests/data/zombie.mesh")) ||
+	    !(animation = animation_instance_new(&mesh->animations[0]))) {
 		return 0;
 	}
 	return 1;
@@ -237,11 +237,16 @@ main(int argc, char *argv[])
 
 		// render and measure rendering time
 		now = tstamp();
-		run &= render();
+		ok &= render();
 		render_time = timedelta(tstamp(), now);
 	}
 
 	cleanup_resources();
 	shutdown();
-	return ok ? EXIT_SUCCESS : EXIT_FAILURE;
+
+	if (!ok) {
+		error_dump_traceback(stderr);
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }

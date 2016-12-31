@@ -1,21 +1,21 @@
 #include "file_utils.h"
+#include "error.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 size_t
-file_read(const char *filename, char **r_buf, err_t *r_err)
+file_read(const char *filename, char **r_buf)
 {
 	assert(filename != NULL);
 	assert(r_buf != NULL);
 
 	size_t size = 0;
-	err_t err = 0;
 
 	// open the file in binary read mode
 	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
-		err = ERR_NO_FILE;
+		errf(ERR_NO_FILE, "%s", filename);
 		goto error;
 	}
 
@@ -27,7 +27,7 @@ file_read(const char *filename, char **r_buf, err_t *r_err)
 	// allocate a buffer for its contents
 	*r_buf = malloc(size + 1);
 	if (!*r_buf) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 
@@ -35,7 +35,7 @@ file_read(const char *filename, char **r_buf, err_t *r_err)
 
 	// read the file
 	if (fread(*r_buf, 1, size, fp) != size) {
-		err = ERR_IO;
+		err(ERR_IO);
 		goto error;
 	}
 
@@ -48,8 +48,5 @@ cleanup:
 error:
 	size = 0;
 	free(*r_buf);
-	if (r_err) {
-		*r_err = err;
-	}
 	goto cleanup;
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "errors.h"
 #include <GL/glew.h>
 
 struct Character {
@@ -12,7 +11,7 @@ struct Character {
 struct Font;
 
 struct Font*
-font_from_file(const char *filename, unsigned size, err_t *r_err);
+font_from_file(const char *filename, unsigned size);
 
 const struct Character*
 font_get_char(struct Font *font, char c);

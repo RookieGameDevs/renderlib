@@ -1,3 +1,4 @@
+#include "error.h"
 #include "image.h"
 #include <assert.h>
 #include <png.h>
@@ -5,14 +6,8 @@
 #include <stdlib.h>
 
 static void*
-read_png(
-	const char *filename,
-	unsigned *r_width,
-	unsigned *r_height,
-	err_t *r_err
-) {
+read_png(const char *filename, unsigned *r_width, unsigned *r_height) {
 	assert(filename != NULL);
-	err_t err = 0;
 
 	void *data = NULL;
 	png_structp png_ptr = NULL;
@@ -25,14 +20,14 @@ read_png(
 	// open the given file
 	FILE *fp = fopen(filename, "r");
 	if (!fp) {
-		err = ERR_NO_FILE;
+		err(ERR_NO_FILE);
 		goto error;
 	}
 
 	// attempt to read 8 bytes and check whether we're reading a PNG file
 	if (fread(hdr, 1, hdr_size, fp) != hdr_size ||
 	    png_sig_cmp(hdr, 0, hdr_size) != 0) {
-		err = ERR_INVALID_IMAGE;
+		err(ERR_INVALID_IMAGE);
 		goto error;
 	}
 
@@ -44,19 +39,19 @@ read_png(
 		NULL
 	);
 	if (!png_ptr) {
-		err = ERR_LIBPNG;
+		err(ERR_LIBPNG);
 		goto error;
 	}
 
 	info_ptr = png_create_info_struct(png_ptr);
 	if (!info_ptr) {
-		err = ERR_LIBPNG;
+		err(ERR_LIBPNG);
 		goto error;
 	}
 
 	// set the error handling longjmp point
 	if (setjmp(png_jmpbuf(png_ptr))) {
-		err = ERR_INVALID_IMAGE;
+		err(ERR_INVALID_IMAGE);
 		goto error;
 	}
 
@@ -112,14 +107,14 @@ read_png(
 	size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 	data = malloc(height * rowbytes);
 	if (!data) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 
 	// setup an array of image row pointers
 	rows = malloc(height * sizeof(png_bytep));
 	if (!rows) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	for (size_t r = 0; r < height; r++) {
@@ -138,30 +133,26 @@ cleanup:
 	return data;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	free(data);
 	data = NULL;
 	goto cleanup;
 }
 
 struct Image*
-image_from_file(const char *filename, err_t *r_err)
+image_from_file(const char *filename)
 {
 	assert(filename != NULL);
 
 	struct Image *image = NULL;
-	err_t err = 0;
 
 	// allocate image struct
 	if (!(image = malloc(sizeof(struct Image)))) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 
 	// read PNG image
-	image->data = read_png(filename, &image->width, &image->height, &err);
+	image->data = read_png(filename, &image->width, &image->height);
 	if (!image->data) {
 		goto error;
 	}
@@ -169,9 +160,6 @@ image_from_file(const char *filename, err_t *r_err)
 	return image;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	image_free(image);
 	return NULL;
 }

@@ -2,7 +2,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "anim.h"
-#include "errors.h"
+#include "error.h"
 #include "file_utils.h"
 #include "mesh.h"
 #include <assert.h>
@@ -59,6 +59,7 @@ init_gl_objects(struct Mesh *m, void *vdata, void *idata)
 	// create VAO
 	glGenVertexArrays(1, &m->vao);
 	if (!m->vao || glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
 		goto error;
 	}
 	glBindVertexArray(m->vao);
@@ -67,6 +68,7 @@ init_gl_objects(struct Mesh *m, void *vdata, void *idata)
 	GLuint bufs[2];
 	glGenBuffers(2, bufs);
 	if (bufs[0] == 0 || bufs[1] == 0 || glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
 		goto error;
 	}
 	m->vbo = bufs[0];
@@ -81,6 +83,7 @@ init_gl_objects(struct Mesh *m, void *vdata, void *idata)
 		GL_STATIC_DRAW
 	);
 	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
 		goto error;
 	}
 
@@ -158,6 +161,11 @@ init_gl_objects(struct Mesh *m, void *vdata, void *idata)
 		GL_STATIC_DRAW
 	);
 
+	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
+		goto error;
+	}
+
 cleanup:
 	// reset the context
 	glBindVertexArray(0);
@@ -171,20 +179,20 @@ error:
 
 
 struct Mesh*
-mesh_from_file(const char *filename, err_t *r_err)
+mesh_from_file(const char *filename)
 {
 	// read file contents into a buffer
 	char *data = NULL;
 	size_t size = 0;
 	struct Mesh *mesh = NULL;
-	if ((size = file_read(filename, &data, r_err)) == 0) {
-		// file read error
+	if ((size = file_read(filename, &data)) == 0) {
+		errf(ERR_INVALID_MESH, "%s", filename);
 		return NULL;
 	}
 
 	// create mesh; this could fail and we fall through and propagate the
 	// error
-	mesh = mesh_from_buffer(data, size, r_err);
+	mesh = mesh_from_buffer(data, size);
 
 	// cleanup
 	free(data);
@@ -194,16 +202,15 @@ mesh_from_file(const char *filename, err_t *r_err)
 
 
 struct Mesh*
-mesh_from_buffer(const char *data, size_t size, err_t *r_err)
+mesh_from_buffer(const char *data, size_t size)
 {
 	struct Mesh *m = NULL;
 	void *vertex_data = NULL;
 	void *index_data = NULL;
-	err_t err = 0;
 
 	// initialize mesh struct
 	if (!(m = malloc(sizeof(struct Mesh)))) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	memset(m, 0, sizeof(struct Mesh));
@@ -211,7 +218,7 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 	// header sanity check
 	if (size < HEADER_SIZE ||
 	    get_field(data, VERSION_FIELD) != MESH_VERSION) {
-		err = ERR_INVALID_MESH;
+		err(ERR_INVALID_MESH);
 		goto error;
 	}
 
@@ -222,7 +229,7 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 	if (!(m->vertex_format & VERTEX_HAS_POSITION) ||
 	    m->vertex_count == 0 ||
 	    m->index_count == 0) {
-		err = ERR_INVALID_MESH;
+		err(ERR_INVALID_MESH);
 		goto error;
 	}
 
@@ -247,11 +254,11 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 	// initialize vertex data buffer
 	size_t vsize = m->vertex_count * m->vertex_size;
 	if (size < offset + vsize) {
-		err = ERR_INVALID_MESH;
+		err(ERR_INVALID_MESH);
 		goto error;
 	}
 	if (!(vertex_data = malloc(vsize))) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	memcpy(vertex_data, data + offset, vsize);
@@ -260,11 +267,11 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 	// initialize index data buffer
 	size_t isize = m->index_count * INDEX_SIZE;
 	if (size < offset + isize) {
-		err = ERR_INVALID_MESH;
+		err(ERR_INVALID_MESH);
 		goto error;
 	}
 	if (!(index_data = malloc(isize))) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	memcpy(index_data, data + offset, isize);
@@ -275,13 +282,13 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 		size_t joint_count = get_field(data, JCOUNT_FIELD);
 		size_t jsize = joint_count * JOINT_SIZE;
 		if (size < offset + jsize) {
-			err = ERR_INVALID_MESH;
+			err(ERR_INVALID_MESH);
 			goto error;
 		}
 
 		if (!(m->skeleton = malloc(sizeof(struct Skeleton))) ||
 		    !(m->skeleton->joints = malloc(sizeof(struct Joint) * joint_count))) {
-			err = ERR_NO_MEM;
+			err(ERR_NO_MEM);
 			goto error;
 		}
 
@@ -302,7 +309,7 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 	if (m->skeleton && m->anim_count > 0) {
 		m->animations = malloc(sizeof(struct Animation) * m->anim_count);
 		if (!m->animations) {
-			err = ERR_NO_MEM;
+			err(ERR_NO_MEM);
 			goto error;
 		}
 
@@ -318,7 +325,7 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 			// read timestamps
 			anim->timestamps = malloc(sizeof(float) * anim->pose_count);
 			if (!anim->timestamps) {
-				err = ERR_NO_MEM;
+				err(ERR_NO_MEM);
 				// TODO: free timestamp data
 				goto error;
 			}
@@ -330,7 +337,7 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 			// read skeleton poses
 			anim->poses = malloc(sizeof(struct SkeletonPose) * anim->pose_count);
 			if (!anim->poses) {
-				err = ERR_NO_MEM;
+				err(ERR_NO_MEM);
 				// TODO: free animation data
 				goto error;
 			}
@@ -342,7 +349,7 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 					sizeof(struct JointPose) * m->skeleton->joint_count
 				);
 				if (!sp->skeleton || !sp->joint_poses) {
-					err = ERR_NO_MEM;
+					err(ERR_NO_MEM);
 					// TODO: free skeleton pose data
 					goto error;
 				}
@@ -380,7 +387,6 @@ mesh_from_buffer(const char *data, size_t size, err_t *r_err)
 	}
 
 	if (!init_gl_objects(m, vertex_data, index_data)) {
-		err = ERR_OPENGL;
 		goto error;
 	}
 
@@ -390,9 +396,6 @@ cleanup:
 	return m;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	mesh_free(m);
 	m = NULL;
 	goto cleanup;
@@ -407,13 +410,10 @@ mesh_new(
 	uint8_t joint_weights[][4],
 	size_t vertex_count,
 	uint32_t *indices,
-	size_t index_count,
-	err_t *r_err
+	size_t index_count
 ) {
 	assert(vertices != NULL && vertex_count >= 3);
 	assert(indices != NULL && index_count >= 3);
-
-	err_t err = 0;
 
 	// determine vertex format and size
 	int vertex_format = VERTEX_HAS_POSITION;
@@ -458,7 +458,7 @@ mesh_new(
 	// initialize mesh
 	struct Mesh *m = malloc(sizeof(struct Mesh));
 	if (!m) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	memset(m, 0, sizeof(struct Mesh));
@@ -471,16 +471,12 @@ mesh_new(
 	mat_ident(&m->transform);
 
 	if (!init_gl_objects(m, vertex_data, indices)) {
-		err = ERR_OPENGL;
 		goto error;
 	}
 
 	return m;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	mesh_free(m);
 	return NULL;
 }

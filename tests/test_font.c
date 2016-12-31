@@ -6,15 +6,12 @@
 
 START_TEST(test_load_from_file)
 {
-	struct Font *font = font_from_file("tests/data/courier.ttf", 12, NULL);
+	struct Font *font = font_from_file("tests/data/courier.ttf", 12);
 	ck_assert(font != NULL);
 	font_free(font);
 
-	err_t err = 0;
-	font = font_from_file("notfound.ttf", 12, &err);
+	font = font_from_file("notfound.ttf", 12);
 	ck_assert(font == NULL);
-	ck_assert_int_ne(err, 0);
-	font_free(font);
 }
 END_TEST
 

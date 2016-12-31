@@ -1,8 +1,9 @@
+#include "error.h"
 #include "file_utils.h"
-#include "matlib.h"
 #include "shader.h"
 #include "string_utils.h"
 #include <assert.h>
+#include <matlib.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,36 +33,34 @@ compute_uniform_size(struct ShaderUniform *uniform)
 		return uniform->count * sizeof(GLfloat) * 3;
 	case GL_FLOAT_VEC2:
 		return uniform->count * sizeof(GLfloat) * 2;
+	default:
+		err(ERR_SHADER_UNKNOWN_UNIFORM_TYPE);
 	}
 	return 0;  // unknown uniform type
 }
 
 struct ShaderSource*
-shader_source_from_string(const char *source, GLenum type, err_t *r_err)
+shader_source_from_string(const char *source, GLenum type)
 {
 	assert(source != NULL);
 	assert(type == GL_VERTEX_SHADER || type == GL_FRAGMENT_SHADER);
 
-	err_t err = 0;
-
 	// alloc ShaderSource struct
 	struct ShaderSource *ss = malloc(sizeof(struct ShaderSource));
 	if (!ss) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		return NULL;
 	}
 
 	// create the shader
 	if (!(ss->src = glCreateShader(type))) {
-		err = ERR_OPENGL;
+		err(ERR_OPENGL);
 		goto error;
 	}
 
 	// set shader source and compile it
 	glShaderSource(ss->src, 1, (const char**)&source, NULL);
 	glCompileShader(ss->src);
-
-	// check compile status
 	GLint status;
 	glGetShaderiv(ss->src, GL_COMPILE_STATUS, &status);
 	if (status == GL_FALSE) {
@@ -70,45 +69,39 @@ shader_source_from_string(const char *source, GLenum type, err_t *r_err)
 		glGetShaderiv(ss->src, GL_INFO_LOG_LENGTH, &log_len);
 		char log[log_len];
 		glGetShaderInfoLog(ss->src, log_len, NULL, log);
-
-		err = ERR_SHADER_COMPILE;
+		errf(ERR_SHADER_COMPILE, "%s", log);
 		goto error;
 	}
 
 	return ss;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	shader_source_free(ss);
 	return NULL;
 }
 
 struct ShaderSource*
-shader_source_from_file(const char *filename, err_t *r_err)
+shader_source_from_file(const char *filename)
 {
 	assert(filename != NULL);
 
-	err_t err = 0;
 	struct ShaderSource *ss = NULL;
 	char *source = NULL;
 
 	// determine shader type from filename extension
-	GLenum type;
+	GLenum type = 0;
 	const char *ext = strrchr(filename, '.');
 	if (strncmp(ext, ".vert", 4) == 0) {
 		type = GL_VERTEX_SHADER;
 	} else if (strncmp(ext, ".frag", 4) == 0) {
 		type = GL_FRAGMENT_SHADER;
-	} else {
-		err = ERR_INVALID_SHADER;
-		goto error;
 	}
 
 	// attempt to read the file and compile its content as shader
-	if (!file_read(filename, &source, &err) ||
-	    !(ss = shader_source_from_string(source, type, &err))) {
+	if (!type ||
+	    !file_read(filename, &source) ||
+	    !(ss = shader_source_from_string(source, type))) {
+		errf(ERR_INVALID_SHADER, "%s", filename);
 		goto error;
 	}
 
@@ -118,9 +111,8 @@ cleanup:
 	return ss;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
+	shader_source_free(ss);
+	ss = NULL;
 	goto cleanup;
 }
 
@@ -137,8 +129,7 @@ static int
 query_uniform_block(
 	struct Shader *shader,
 	GLuint index,
-	size_t max_name_len,
-	err_t *r_err
+	size_t max_name_len
 ) {
 	struct ShaderUniformBlock *block = &shader->blocks[index];
 
@@ -152,13 +143,14 @@ query_uniform_block(
 		name
 	);
 	if (!(block->name = string_copy(name))) {
-		*r_err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		return 0;
 	}
 
 	// query block index
 	block->index = glGetUniformBlockIndex(shader->prog, name);
 	if (block->index == GL_INVALID_INDEX) {
+		errf(ERR_SHADER_NO_UNIFORM_BLOCK, "%s", name);
 		return 0;
 	}
 
@@ -189,7 +181,7 @@ query_uniform_block(
 	// allocate block uniforms array
 	size_t uniforms_size = sizeof(struct ShaderUniform) * block->uniform_count;
 	if (!(block->uniforms = malloc(uniforms_size))) {
-		*r_err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		return 0;
 	}
 	memset(block->uniforms, 0, uniforms_size);
@@ -247,7 +239,8 @@ query_uniform_block(
 
 		// retrieve uniform name
 		if (!(uniform->name = malloc(uniform_name_lengths[i]))) {
-			*r_err = ERR_NO_MEM;
+			err(ERR_NO_MEM);
+			return 0;
 		}
 		glGetActiveUniformName(
 			shader->prog,
@@ -262,7 +255,7 @@ query_uniform_block(
 }
 
 static int
-init_shader_uniform_blocks(struct Shader *s, err_t *r_err)
+init_shader_uniform_blocks(struct Shader *s)
 {
 	// query the number of uniform blocks
 	glGetProgramiv(s->prog, GL_ACTIVE_UNIFORM_BLOCKS, (GLint*)&s->block_count);
@@ -275,7 +268,7 @@ init_shader_uniform_blocks(struct Shader *s, err_t *r_err)
 	size_t blocks_size = sizeof(struct ShaderUniformBlock) * s->block_count;
 	s->blocks = malloc(blocks_size);
 	if (!s->blocks) {
-		*r_err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		return 0;
 	}
 	memset(s->blocks, 0, blocks_size);
@@ -290,7 +283,7 @@ init_shader_uniform_blocks(struct Shader *s, err_t *r_err)
 
 	// populate blocks array
 	for (size_t i = 0; i < s->block_count; i++) {
-		if (!query_uniform_block(s, i, max_name_len, r_err)) {
+		if (!query_uniform_block(s, i, max_name_len)) {
 			return 0;
 		}
 	}
@@ -298,7 +291,7 @@ init_shader_uniform_blocks(struct Shader *s, err_t *r_err)
 }
 
 static int
-init_shader_uniforms(struct Shader *s, err_t *r_err)
+init_shader_uniforms(struct Shader *s)
 {
 	// query the number of uniforms in shader proram
 	GLuint count = 0;
@@ -347,7 +340,7 @@ init_shader_uniforms(struct Shader *s, err_t *r_err)
 		size_t uniforms_size = sizeof(struct ShaderUniform) * actual_count;
 		s->uniforms = malloc(uniforms_size);
 		if (!s->uniforms) {
-			*r_err = ERR_NO_MEM;
+			err(ERR_NO_MEM);
 			return 0;
 		}
 		memset(s->uniforms, 0, uniforms_size);
@@ -369,12 +362,10 @@ init_shader_uniforms(struct Shader *s, err_t *r_err)
 }
 
 struct Shader*
-shader_new(struct ShaderSource **sources, unsigned count, err_t *r_err)
+shader_new(struct ShaderSource **sources, unsigned count)
 {
 	assert(sources != NULL);
 	assert(count > 0);
-
-	err_t err = 0;
 
 	GLuint prog = 0;
 	struct Shader *shader = NULL;
@@ -382,7 +373,7 @@ shader_new(struct ShaderSource **sources, unsigned count, err_t *r_err)
 	// create shader program
 	prog = glCreateProgram();
 	if (!prog) {
-		err = ERR_OPENGL;
+		err(ERR_OPENGL);
 		goto error;
 	}
 
@@ -402,32 +393,28 @@ shader_new(struct ShaderSource **sources, unsigned count, err_t *r_err)
 		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_len);
 		char log[log_len];
 		glGetProgramInfoLog(prog, log_len, NULL, log);
-
-		err = ERR_SHADER_LINK;
+		errf(ERR_SHADER_LINK, "%s", log);
 		goto error;
 	}
 
 	// alloc Shader struct
 	shader = malloc(sizeof(struct Shader));
 	if (!shader) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
 		goto error;
 	}
 	memset(shader, 0, sizeof(struct Shader));
 	shader->prog = prog;
 
 	// initialize shader uniforms and uniform blocks tables
-	if (!init_shader_uniform_blocks(shader, &err) ||
-	    !init_shader_uniforms(shader, &err)) {
+	if (!init_shader_uniform_blocks(shader) ||
+	    !init_shader_uniforms(shader)) {
 		goto error;
 	}
 
 	return shader;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	shader_free(shader);
 	return NULL;
 }
@@ -439,22 +426,19 @@ shader_compile(
 	const char *uniform_names[],
 	struct ShaderUniform *r_uniforms[],
 	const char *uniform_block_names[],
-	struct ShaderUniformBlock *r_uniform_blocks[],
-	err_t *r_err
+	struct ShaderUniformBlock *r_uniform_blocks[]
 ) {
 	assert(vert_src_filename != NULL);
 	assert(frag_src_filename != NULL);
 	assert(uniform_names ? r_uniforms != NULL : 1);
 	assert(uniform_block_names ? r_uniform_blocks != NULL : 1);
 
-	err_t err = 0;
-
 	// compile sources and link them into a shader program
 	struct Shader *shader = NULL;
 	struct ShaderSource *sources[2] = { NULL, NULL };
-	sources[0] = shader_source_from_file(vert_src_filename, &err);
-	sources[1] = shader_source_from_file(frag_src_filename, &err);
-	if (!sources[0] || !sources[1] || !(shader = shader_new(sources, 2, &err))) {
+	sources[0] = shader_source_from_file(vert_src_filename);
+	sources[1] = shader_source_from_file(frag_src_filename);
+	if (!sources[0] || !sources[1] || !(shader = shader_new(sources, 2))) {
 		goto error;
 	}
 
@@ -483,9 +467,6 @@ shader_compile(
 	return shader;
 
 error:
-	if (r_err) {
-		*r_err = err;
-	}
 	shader_source_free(sources[0]);
 	shader_source_free(sources[1]);
 	shader_free(shader);
@@ -521,7 +502,10 @@ shader_bind(struct Shader *s)
 	glUseProgram(s->prog);
 
 #ifdef DEBUG
-	return glGetError() == GL_NO_ERROR;
+	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
+		return 0;
+	}
 #endif
 
 	return 1;
@@ -539,6 +523,7 @@ shader_get_uniform(struct Shader *s, const char *name)
 			return uniform;
 		}
 	}
+	errf(ERR_SHADER_NO_UNIFORM, "%s", name);
 	return NULL;
 }
 
@@ -573,6 +558,7 @@ shader_get_uniform_block(struct Shader *s, const char *name)
 			return block;
 		}
 	}
+	errf(ERR_SHADER_NO_UNIFORM_BLOCK, "%s", name);
 	return NULL;
 }
 
@@ -606,6 +592,7 @@ shader_uniform_block_get_uniform(const struct ShaderUniformBlock *block, const c
 			return &block->uniforms[i];
 		}
 	}
+	errf(ERR_SHADER_NO_UNIFORM, "%s", name);
 	return NULL;
 }
 
@@ -669,7 +656,10 @@ shader_uniform_set(const struct ShaderUniform *uniform, size_t count, ...)
 	va_end(ap);
 
 #ifdef DEBUG
-	return glGetError() == GL_NO_ERROR;
+	if (glGetError() != GL_NO_ERROR) {
+		err(ERR_OPENGL);
+		return 0;
+	}
 #endif
 	return 1;
 }

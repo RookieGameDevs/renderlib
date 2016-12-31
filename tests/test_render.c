@@ -7,7 +7,7 @@
 
 START_TEST(test_render_mesh_simple)
 {
-	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh", NULL);
+	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh");
 
 	Mat identity;
 	mat_ident(&identity);
@@ -18,8 +18,8 @@ START_TEST(test_render_mesh_simple)
 		.projection = identity,
 		.enable_animation = 0
 	};
-	ck_assert(render_mesh(mesh, &props, NULL));
-	ck_assert(renderer_present(NULL));
+	ck_assert(render_mesh(mesh, &props));
+	ck_assert(renderer_present());
 	mesh_free(mesh);
 }
 END_TEST

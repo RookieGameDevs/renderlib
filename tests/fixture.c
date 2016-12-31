@@ -36,9 +36,7 @@ setup(void)
 	ck_assert(context != NULL);
 
 	// initialize renderer
-	err_t err = 0;
-	ck_assert(renderer_init(&err));
-	ck_assert_int_eq(err, 0);
+	ck_assert(renderer_init());
 }
 
 void

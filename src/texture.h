@@ -1,6 +1,5 @@
 #pragma once
 
-#include "errors.h"
 #include <GL/glew.h>
 
 struct Texture {
@@ -9,7 +8,7 @@ struct Texture {
 };
 
 struct Texture*
-texture_from_image(struct Image *image, GLenum type, err_t *r_err);
+texture_from_image(struct Image *image, GLenum type);
 
 void
 texture_free(struct Texture *tex);

@@ -2,6 +2,7 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 
+#include "error.h"
 #include "font.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -27,6 +28,7 @@ static int
 init_freetype(void)
 {
 	if (FT_Init_FreeType(&ft) != 0) {
+		err(ERR_FREETYPE);
 		return 0;
 	}
 	atexit(shutdown_freetype);
@@ -37,16 +39,17 @@ init_freetype(void)
 static int
 init_glyph_texture(struct Font *font, FT_Glyph *glyphs)
 {
-	glGenTextures(1, &font->tex_glyph);
-	if (!font->tex_glyph) {
-		return 0;
-	}
-
 	GLubyte data[128][2];
 	for (unsigned char c = 0; c < 128; c++) {
 		struct Character *ch = &font->charmap[c];
 		data[c][0] = ch->size[0];
 		data[c][1] = ch->size[1];
+	}
+
+	glGenTextures(1, &font->tex_glyph);
+	if (!font->tex_glyph) {
+		err(ERR_OPENGL);
+		return 0;
 	}
 
 	glBindTexture(GL_TEXTURE_1D, font->tex_glyph);
@@ -71,6 +74,7 @@ init_glyph_texture(struct Font *font, FT_Glyph *glyphs)
 	if (glGetError() != GL_NO_ERROR) {
 		glDeleteTextures(1, &font->tex_glyph);
 		font->tex_glyph = 0;
+		err(ERR_OPENGL);
 		return 0;
 	}
 
@@ -118,6 +122,7 @@ init_atlas_texture(struct Font *font, FT_Glyph *glyphs)
 	// create the atlas texture
 	glGenTextures(1, &font->tex_atlas);
 	if (!font->tex_atlas) {
+		err(ERR_OPENGL);
 		return 0;
 	}
 
@@ -147,6 +152,7 @@ init_atlas_texture(struct Font *font, FT_Glyph *glyphs)
 	if (glGetError() != GL_NO_ERROR) {
 		glDeleteTextures(1, &font->tex_glyph);
 		font->tex_glyph = 0;
+		err(ERR_OPENGL);
 		return 0;
 	}
 
@@ -166,6 +172,7 @@ init_font(struct Font *font, FT_Face face)
 		if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0 ||
 		    FT_Get_Glyph(face->glyph, &glyphs[c]) != 0 ||
 		    FT_Glyph_To_Bitmap(&glyphs[c], FT_RENDER_MODE_NORMAL, NULL, 0) != 0) {
+			err(ERR_FREETYPE);
 			return 0;
 		}
 		struct Character *ch = &font->charmap[c];
@@ -189,39 +196,38 @@ init_font(struct Font *font, FT_Face face)
 }
 
 struct Font*
-font_from_file(const char *filename, unsigned size, err_t *r_err)
+font_from_file(const char *filename, unsigned size)
 {
 	assert(filename != NULL);
 	assert(strlen(filename) > 0);
 
 	FT_Face face = NULL;
 	struct Font *font = NULL;
-	err_t err = 0;
 
 	if ((!ft_initialized && !init_freetype())) {
-		err = ERR_FREETYPE;
+		goto error;
 	} else if (FT_New_Face(ft, filename, 0, &face) != 0 ||
 	           FT_Set_Pixel_Sizes(face, 0, size) != 0) {
-		err = ERR_INVALID_FONT;
+		err(ERR_INVALID_FONT);
+		goto error;
 	} else if (!(font = malloc(sizeof(struct Font)))) {
-		err = ERR_NO_MEM;
+		err(ERR_NO_MEM);
+		goto error;
 	} else if (!init_font(font, face)) {
-		err = ERR_OPENGL;
+		goto error;
 	}
 
-	if (err) {
-		if (r_err) {
-			*r_err = err;
-		}
-		font_free(font);
-		font = NULL;
-	}
-
+cleanup:
 	if (face) {
 		FT_Done_Face(face);
 	}
 
 	return font;
+
+error:
+	font_free(font);
+	font = NULL;
+	goto cleanup;
 }
 
 const struct Character*
