@@ -149,9 +149,10 @@ render(void)
 	mat_ident(&props.view);
 	mat_translate(&props.view, 0, 0, -500);
 
-	int ok = render_mesh(mesh, &props);
-
-	renderer_present();
+	int ok = (
+		render_mesh(mesh, &props) &&
+		renderer_present()
+	);
 	SDL_GL_SwapWindow(window);
 	return ok;
 }
