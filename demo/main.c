@@ -11,6 +11,7 @@
 #include "mesh.h"
 #include "renderer.h"
 #include "texture.h"
+#include "error.h"
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -27,10 +28,16 @@ static struct {
 	int play_animation;
 } controls;
 
+// main model
 static struct Mesh *mesh = NULL;
 static struct AnimationInstance *animation = NULL;
 static struct Image *image = NULL;
 static struct Texture *texture = NULL;
+
+// terrain model
+static struct Mesh *terrain_mesh = NULL;
+static struct Image *grass_img = NULL;
+static struct Texture *terrain_tex = NULL;
 
 static int
 init(unsigned width, unsigned height)
@@ -142,20 +149,43 @@ render(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	struct MeshRenderProps props = {
+	Mat model, view;
+	mat_ident(&model);
+	mat_ident(&view);
+	mat_lookat(
+		&view,
+		300, 300, 0,
+		0, 0, -500,
+		0, 1, 0
+	);
+	mat_translate(&view, 0, -20, -500);
+
+	struct MeshRenderProps mesh_props = {
+		.model = model,
+		.view = view,
+		.projection = camera.projection,
 		.cast_shadows = 1,
 		.receive_shadows = 1,
-		.projection = camera.projection,
 		.enable_animation = 1,
 		.animation = animation,
 		.texture = texture
 	};
-	mat_ident(&props.model);
-	mat_ident(&props.view);
-	mat_translate(&props.view, 0, 0, -500);
+
+	struct MeshRenderProps terrain_props = {
+		.model = model,
+		.view = view,
+		.projection = camera.projection,
+		.cast_shadows = 0,
+		.receive_shadows = 1,
+		.enable_animation = 0,
+		.texture = terrain_tex
+	};
+	mat_scale(&terrain_props.model, 250, 250, 1);
+	mat_rotate(&terrain_props.model, 1, 0, 0, M_PI / 2);
 
 	int ok = (
-		render_mesh(mesh, &props) &&
+		render_mesh(mesh, &mesh_props) &&
+		render_mesh(terrain_mesh, &terrain_props) &&
 		renderer_present()
 	);
 	SDL_GL_SwapWindow(window);
@@ -168,7 +198,11 @@ load_resources(void)
 	if (!(mesh = mesh_from_file("tests/data/zombie.mesh")) ||
 	    !(animation = animation_instance_new(&mesh->animations[0])) ||
 	    !(image = image_from_file("tests/data/zombie.jpg")) ||
-	    !(texture = texture_from_image(image, GL_TEXTURE_2D))) {
+	    !(texture = texture_from_image(image, GL_TEXTURE_2D)) ||
+	    !(terrain_mesh = mesh_from_file("tests/data/plane.mesh")) ||
+	    !(grass_img = image_from_file("tests/data/grass.jpg")) ||
+	    !(terrain_tex = texture_from_image(grass_img, GL_TEXTURE_2D))) {
+		errf(ERR_GENERIC, "failed to load resources", 0);
 		return 0;
 	}
 	return 1;
@@ -177,6 +211,9 @@ load_resources(void)
 static void
 cleanup_resources(void)
 {
+	texture_free(terrain_tex);
+	image_free(grass_img);
+	mesh_free(terrain_mesh);
 	texture_free(texture);
 	image_free(image);
 	animation_instance_free(animation);
