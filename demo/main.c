@@ -7,8 +7,10 @@
 
 // renderlib headers
 #include "anim.h"
+#include "image.h"
 #include "mesh.h"
 #include "renderer.h"
+#include "texture.h"
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -27,6 +29,8 @@ static struct {
 
 static struct Mesh *mesh = NULL;
 static struct AnimationInstance *animation = NULL;
+static struct Image *image = NULL;
+static struct Texture *texture = NULL;
 
 static int
 init(unsigned width, unsigned height)
@@ -143,7 +147,8 @@ render(void)
 		.receive_shadows = 1,
 		.projection = camera.projection,
 		.enable_animation = 1,
-		.animation = animation
+		.animation = animation,
+		.texture = texture
 	};
 	mat_ident(&props.model);
 	mat_ident(&props.view);
@@ -161,7 +166,9 @@ static int
 load_resources(void)
 {
 	if (!(mesh = mesh_from_file("tests/data/zombie.mesh")) ||
-	    !(animation = animation_instance_new(&mesh->animations[0]))) {
+	    !(animation = animation_instance_new(&mesh->animations[0])) ||
+	    !(image = image_from_file("tests/data/zombie.jpg")) ||
+	    !(texture = texture_from_image(image, GL_TEXTURE_2D))) {
 		return 0;
 	}
 	return 1;
@@ -170,6 +177,8 @@ load_resources(void)
 static void
 cleanup_resources(void)
 {
+	texture_free(texture);
+	image_free(image);
 	animation_instance_free(animation);
 	mesh_free(mesh);
 }

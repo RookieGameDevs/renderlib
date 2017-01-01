@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "renderer.h"
 #include "shader.h"
+#include "texture.h"
 #include <assert.h>
 #include <stdlib.h>
 
@@ -11,6 +12,8 @@ static struct ShaderUniform u_projection;
 static struct ShaderUniform u_enable_skinning;
 static struct ShaderUniformBlock ub_skin_transforms;
 static struct ShaderUniform u_skin_transforms;
+static struct ShaderUniform u_enable_texture_mapping;
+static struct ShaderUniform u_texture_map_sampler;
 static struct Shader *shader = NULL;
 
 static GLuint skin_transforms_buffer = 0;
@@ -34,6 +37,8 @@ init_mesh_pipeline(void)
 		"view",
 		"projection",
 		"enable_skinning",
+		"enable_texture_mapping",
+		"texture_map_sampler",
 		NULL
 	};
 	struct ShaderUniform *uniforms[] = {
@@ -41,6 +46,8 @@ init_mesh_pipeline(void)
 		&u_view,
 		&u_projection,
 		&u_enable_skinning,
+		&u_enable_texture_mapping,
+		&u_texture_map_sampler
 	};
 
 	// uniform block names and receiver pointers
@@ -165,6 +172,34 @@ configure_skinning(int enable_animation, struct AnimationInstance *inst)
 	return 1;
 }
 
+static int
+configure_texture_mapping(struct Texture *texture)
+{
+	int enable_texture_mapping = texture != NULL;
+	int ok = shader_uniform_set(
+		&u_enable_texture_mapping,
+		1,
+		&enable_texture_mapping
+	);
+
+	if (enable_texture_mapping) {
+		GLint tex_unit = 0;
+		ok &= shader_uniform_set(
+			&u_texture_map_sampler,
+			1,
+			&tex_unit
+		);
+		glActiveTexture(GL_TEXTURE0 + tex_unit);
+		glBindTexture(texture->type, texture->id);
+		if (glGetError() != GL_NO_ERROR) {
+			err(ERR_OPENGL);
+			return 0;
+		}
+	}
+
+	return ok;
+}
+
 int
 draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 	assert(mesh != NULL);
@@ -175,9 +210,11 @@ draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 		shader_uniform_set(&u_model, 1, &props->model) &&
 		shader_uniform_set(&u_view, 1, &props->view) &&
 		shader_uniform_set(&u_projection, 1, &props->projection) &&
-		configure_skinning(props->enable_animation, props->animation)
+		configure_skinning(props->enable_animation, props->animation) &&
+		configure_texture_mapping(props->texture)
 	);
 	if (!configured) {
+		errf(ERR_GENERIC, "failed to configure mesh pipeline", 0);
 		return 0;
 	}
 

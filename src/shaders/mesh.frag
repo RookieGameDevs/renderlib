@@ -57,16 +57,20 @@ void apply_lighting(
 	color *= (ambient + diffuse + specular);
 }
 
+/*** TEXTURE MAPPING ***/
+uniform bool enable_texture_mapping = false;
+uniform sampler2D texture_map_sampler;
+
 /*** SHADOW MAPPING ***/
 uniform bool enable_shadow_mapping = false;
-uniform sampler2D shadow_map;
+uniform sampler2D shadow_map_sampler;
 
-void apply_shadow(inout vec4 color, sampler2D shadow_map, vec4 position)
+void apply_shadow(inout vec4 color, sampler2D shadow_map_sampler, vec4 position)
 {
 	vec3 coord = position.xyz / position.w;
 	coord = coord * 0.5 + 0.5;
 	float bias = 0.005;
-	if (coord.z - bias > texture(shadow_map, coord.xy).r) {
+	if (coord.z - bias > texture(shadow_map_sampler, coord.xy).r) {
 		color *= 0.5;
 	}
 }
@@ -75,11 +79,15 @@ void main()
 {
 	color = vec4(1.0);
 
+	if (enable_texture_mapping) {
+		color = texture(texture_map_sampler, vec2(uv.x, 1 - uv.y));
+	}
+
 	if (enable_lighting) {
 		apply_lighting(color, light, material, eye, position, normal);
 	}
 
 	if (enable_shadow_mapping) {
-		apply_shadow(color, shadow_map, light_space_position);
+		apply_shadow(color, shadow_map_sampler, light_space_position);
 	}
 }

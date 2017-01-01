@@ -32,6 +32,7 @@ struct MeshRenderProps {
 	int receive_shadows;                 // should receive shadows
 	int enable_animation;                // should apply animation
 	struct AnimationInstance *animation; // animation instance
+	struct Texture *texture;             // texture to apply
 };
 
 /**

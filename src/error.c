@@ -19,7 +19,7 @@ static const char *error_names[] = {
 	// ERR_TRACEBACK_FULL
 	"full error traceback",
 	// ERR_GENERIC
-	"generic error",
+	"error",
 	// ERR_NO_MEM
 	"out of memory",
 	// ERR_IO
