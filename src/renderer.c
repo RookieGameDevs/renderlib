@@ -64,10 +64,7 @@ renderer_init(void)
 	glGetError();
 
 	// initialize pipelines
-	int ok = (
-		init_mesh_pipeline()
-	);
-	if (!ok) {
+	if (!init_mesh_pipeline()) {
 		renderer_shutdown();
 		return 0;
 	}

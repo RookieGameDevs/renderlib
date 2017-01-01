@@ -1,3 +1,4 @@
+#include "error.h"
 #include "anim.h"
 #include "mesh.h"
 #include "renderer.h"
