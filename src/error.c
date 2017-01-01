@@ -42,6 +42,8 @@ static const char *error_names[] = {
 	"invalid image",
 	// ERR_UNSUPPORTED_IMAGE
 	"unsupported image type",
+	// ERR_UNSUPPORTED_IMAGE_FORMAT
+	"unsupported image format",
 	// ERR_TEXTURE_FORMAT
 	"bad texture format",
 	// ERR_INVALID_FONT

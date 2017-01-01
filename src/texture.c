@@ -10,6 +10,22 @@ texture_from_image(struct Image *image, GLenum type)
 	assert(image != NULL);
 	assert(type == GL_TEXTURE_2D || type == GL_TEXTURE_RECTANGLE);
 
+	// determine OpenGL pixel formats
+	GLenum internal_format, format = 0;
+	switch (image->format) {
+	case IMAGE_FORMAT_RGB:
+		internal_format = GL_RGB8;
+		format = GL_RGB;
+		break;
+	case IMAGE_FORMAT_RGBA:
+		internal_format = GL_RGBA8;
+		format = GL_RGBA;
+		break;
+	default:
+		err(ERR_TEXTURE_FORMAT);
+		return NULL;
+	}
+
 	// alloc Texture struct
 	struct Texture *tex = malloc(sizeof(struct Texture));
 	if (!tex) {
@@ -34,18 +50,6 @@ texture_from_image(struct Image *image, GLenum type)
 	glTexParameteri(type, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(type, GL_TEXTURE_MAX_LEVEL, 0);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	GLenum format = 0;
-	switch (image->format) {
-	case IMAGE_FORMAT_RGB:
-		format = GL_RGB;
-		break;
-	case IMAGE_FORMAT_RGBA:
-		format = GL_RGBA;
-		break;
-	default:
-		err(ERR_TEXTURE_FORMAT);
-		goto error;
-	}
 	glTexImage2D(
 		type,
 		0,

@@ -2,6 +2,8 @@
 
 #include <GL/glew.h>
 
+struct Image;
+
 struct Texture {
 	GLuint id;
 	GLenum type;

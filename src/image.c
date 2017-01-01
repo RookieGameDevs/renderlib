@@ -108,7 +108,14 @@ read_png(const char *filename, unsigned *r_width, unsigned *r_height, int *fmt) 
 	*r_height = height;
 
 	// set format
-	*fmt = IMAGE_FORMAT_RGBA;
+	if (color_type == PNG_COLOR_TYPE_RGB) {
+		*fmt = IMAGE_FORMAT_RGB;
+	} else if (color_type == PNG_COLOR_TYPE_RGBA) {
+		*fmt = IMAGE_FORMAT_RGBA;
+	} else {
+		err(ERR_UNSUPPORTED_IMAGE_FORMAT);
+		goto error;
+	}
 
 	// allocate space for image data
 	size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
@@ -172,30 +179,31 @@ read_jpeg(const char *filename, unsigned *width, unsigned *height, int *fmt)
 		goto error;
 	}
 
+	// decompress always into color RGB format, even if incoming data is in
+	// grayscale or other formats
+	cinfo.out_color_space = JCS_RGB;
+
 	// decompress the image
 	jpeg_start_decompress(&cinfo);
 
 	// allocate buffer for image data
-	size_t row_stride = cinfo.output_width * cinfo.output_components;
-	data = malloc(row_stride * cinfo.output_height);
+	size_t row_size = cinfo.output_width * cinfo.output_components;
+	data = malloc(row_size * cinfo.output_height);
 	if (!data) {
 		err(ERR_NO_MEM);
 		goto error;
 	}
 
-	// read the image into destination buffer one row at time
-	JSAMPARRAY buffer = (*cinfo.mem->alloc_sarray)(
-		(j_common_ptr)&cinfo,
-		JPOOL_IMAGE,
-		row_stride,
-		1
-	);
+	// read the image one row at a time
 	while (cinfo.output_scanline < cinfo.output_height) {
-		jpeg_read_scanlines(&cinfo, buffer, 1);
-		memcpy(
-			data + row_stride * (cinfo.output_scanline - 1),
-			buffer,
-			row_stride
+		// jpeg_read_scanlines() accepts an array of pointers to
+		// scanline starts, in this case we have an array of just one
+		// pointer
+		JSAMPROW scanlines = { data + row_size * cinfo.output_scanline };
+		jpeg_read_scanlines(
+			&cinfo,
+			&scanlines,
+			1
 		);
 	}
 
