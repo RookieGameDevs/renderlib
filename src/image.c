@@ -1,12 +1,16 @@
 #include "error.h"
 #include "image.h"
 #include <assert.h>
+#include <jpeglib.h>
+#include <jerror.h>
 #include <png.h>
 #include <setjmp.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void*
-read_png(const char *filename, unsigned *r_width, unsigned *r_height) {
+read_png(const char *filename, unsigned *r_width, unsigned *r_height, int *fmt) {
 	assert(filename != NULL);
 
 	void *data = NULL;
@@ -103,6 +107,9 @@ read_png(const char *filename, unsigned *r_width, unsigned *r_height) {
 	*r_width = width;
 	*r_height = height;
 
+	// set format
+	*fmt = IMAGE_FORMAT_RGBA;
+
 	// allocate space for image data
 	size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
 	data = malloc(height * rowbytes);
@@ -138,6 +145,84 @@ error:
 	goto cleanup;
 }
 
+static void*
+read_jpeg(const char *filename, unsigned *width, unsigned *height, int *fmt)
+{
+	struct jpeg_decompress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+	void *data = NULL;
+
+	FILE *fp = fopen(filename, "r");
+	if (!fp) {
+		err(ERR_NO_FILE);
+		return NULL;
+	}
+
+	// initialize JPEG error manager and decompressor
+	jpeg_std_error(&jerr);
+	cinfo.err = &jerr;
+	jpeg_create_decompress(&cinfo);
+
+	// feed the file pointer to decompressor
+	jpeg_stdio_src(&cinfo, fp);
+
+	// read the header
+	if (jpeg_read_header(&cinfo, 1) != JPEG_HEADER_OK) {
+		err(ERR_INVALID_IMAGE);
+		goto error;
+	}
+
+	// decompress the image
+	jpeg_start_decompress(&cinfo);
+
+	// allocate buffer for image data
+	size_t row_stride = cinfo.output_width * cinfo.output_components;
+	data = malloc(row_stride * cinfo.output_height);
+	if (!data) {
+		err(ERR_NO_MEM);
+		goto error;
+	}
+
+	// read the image into destination buffer one row at time
+	JSAMPARRAY buffer = (*cinfo.mem->alloc_sarray)(
+		(j_common_ptr)&cinfo,
+		JPOOL_IMAGE,
+		row_stride,
+		1
+	);
+	while (cinfo.output_scanline < cinfo.output_height) {
+		jpeg_read_scanlines(&cinfo, buffer, 1);
+		memcpy(
+			data + row_stride * (cinfo.output_scanline - 1),
+			buffer,
+			row_stride
+		);
+	}
+
+	// retrieve size and set format
+	*width = cinfo.output_width;
+	*height = cinfo.output_height;
+	*fmt = IMAGE_FORMAT_RGB;
+
+cleanup:
+	// finish decompress phase
+	jpeg_finish_decompress(&cinfo);
+
+	// destroy decompressor
+	jpeg_destroy_decompress(&cinfo);
+
+	if (fp) {
+		fclose(fp);
+	}
+
+	return data;
+
+error:
+	free(data);
+	data = NULL;
+	goto cleanup;
+}
+
 struct Image*
 image_from_file(const char *filename)
 {
@@ -145,14 +230,32 @@ image_from_file(const char *filename)
 
 	struct Image *image = NULL;
 
+	// pick image reader function based on file extension
+	const char *ext = strrchr(filename, '.');
+	void* (*reader)(const char*, unsigned*, unsigned*, int*) = NULL;
+	if (strncmp(ext, ".png", 3) == 0) {
+		reader = read_png;
+	} else if (strncmp(ext, ".jpg", 3) == 0 ||
+	           strncmp(ext, ".jpeg", 4) == 0) {
+		reader = read_jpeg;
+	} else {
+		err(ERR_UNSUPPORTED_IMAGE);
+		return 0;
+	}
+
 	// allocate image struct
 	if (!(image = malloc(sizeof(struct Image)))) {
 		err(ERR_NO_MEM);
 		goto error;
 	}
 
-	// read PNG image
-	image->data = read_png(filename, &image->width, &image->height);
+	// read image
+	image->data = reader(
+		filename,
+		&image->width,
+		&image->height,
+		&image->format
+	);
 	if (!image->data) {
 		goto error;
 	}

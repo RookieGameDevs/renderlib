@@ -22,6 +22,12 @@ def options(opt):
         action='store_true',
         help='build demo app')
 
+    opt.add_option(
+        '--jpeg-path',
+        default='/usr',
+        action='store',
+        help='path to libjpeg installation root')
+
 
 def configure(cfg):
     cfg.load('compiler_c')
@@ -46,11 +52,20 @@ def configure(cfg):
         args='--libs --cflags',
         uselib_store='glew')
 
-    # find libPNG
+    # find libpng
     cfg.check_cfg(
         package='libpng',
         args='--libs --cflags',
         uselib_store='libpng')
+
+    # find libjpeg
+    cfg.check_cc(
+        msg=u'Checking for libjpeg',
+        lib='jpeg',
+        header_file='jpeglib.h',
+        includes=[cfg.options.jpeg_path + '/include'],
+        libpath=[cfg.options.jpeg_path + '/lib'],
+        uselib_store='libjpeg')
 
     # find freetype2
     cfg.check_cfg(
@@ -98,7 +113,7 @@ def configure(cfg):
 
 
 def build(bld):
-    deps = ['glew', 'libpng', 'freetype', 'matlib']
+    deps = ['glew', 'libpng', 'libjpeg', 'freetype', 'matlib']
     kwargs = {}
 
     if sys.platform.startswith('linux'):

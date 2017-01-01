@@ -40,6 +40,10 @@ static const char *error_names[] = {
 	"invalid mesh",
 	// ERR_INVALID_IMAGE
 	"invalid image",
+	// ERR_UNSUPPORTED_IMAGE
+	"unsupported image type",
+	// ERR_TEXTURE_FORMAT
+	"bad texture format",
 	// ERR_INVALID_FONT
 	"invalid font",
 	// ERR_INVALID_SHADER

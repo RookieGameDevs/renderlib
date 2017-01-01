@@ -34,14 +34,26 @@ texture_from_image(struct Image *image, GLenum type)
 	glTexParameteri(type, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(type, GL_TEXTURE_MAX_LEVEL, 0);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	GLenum format = 0;
+	switch (image->format) {
+	case IMAGE_FORMAT_RGB:
+		format = GL_RGB;
+		break;
+	case IMAGE_FORMAT_RGBA:
+		format = GL_RGBA;
+		break;
+	default:
+		err(ERR_TEXTURE_FORMAT);
+		goto error;
+	}
 	glTexImage2D(
 		type,
 		0,
-		GL_RGBA,
+		format,
 		image->width,
 		image->height,
 		0,
-		GL_RGBA,
+		format,
 		GL_UNSIGNED_BYTE,
 		image->data
 	);
