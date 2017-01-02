@@ -1,5 +1,4 @@
-#include "error.h"
-#include "renderer.h"
+#include "renderlib.h"
 #include "shadow_map.h"
 #include <GL/glew.h>
 #include <assert.h>

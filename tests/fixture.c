@@ -1,7 +1,7 @@
 #include "fixture.h"
 #include <SDL.h>
 #include <check.h>
-#include <renderer.h>
+#include <renderlib.h>
 
 static SDL_Window *window = NULL;
 static SDL_GLContext *context = NULL;

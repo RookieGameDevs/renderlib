@@ -1,8 +1,4 @@
-#include "anim.h"
-#include "error.h"
-#include "mesh.h"
-#include "renderer.h"
-#include "shader.h"
+#include "renderlib.h"
 #include <GL/glew.h>
 #include <assert.h>
 #include <stdlib.h>

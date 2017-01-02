@@ -1,12 +1,7 @@
 #include "fixture.h"
+#include <renderlib.h>
 #include <check.h>
 #include <stdlib.h>
-
-#include "anim.h"
-#include "image.h"
-#include "mesh.h"
-#include "renderer.h"
-#include "texture.h"
 
 static struct Mesh *mesh = NULL;
 

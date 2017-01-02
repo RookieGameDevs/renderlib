@@ -1,17 +1,10 @@
 #include <GL/glew.h>
 #include <SDL.h>
 #include <matlib.h>
+#include <renderlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-// renderlib headers
-#include "anim.h"
-#include "image.h"
-#include "mesh.h"
-#include "renderer.h"
-#include "texture.h"
-#include "error.h"
 
 #define WIDTH 800
 #define HEIGHT 600

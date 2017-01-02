@@ -1,9 +1,4 @@
-#include "error.h"
-#include "anim.h"
-#include "mesh.h"
-#include "renderer.h"
-#include "shader.h"
-#include "texture.h"
+#include "renderlib.h"
 #include <assert.h>
 #include <stdlib.h>
 
