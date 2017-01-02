@@ -133,9 +133,9 @@ init_mesh_pipeline(void)
 }
 
 static int
-configure_texture_mapping(struct Texture *texture)
+configure_material(struct Material *mat)
 {
-	int enable_texture_mapping = texture != NULL;
+	int enable_texture_mapping = mat ? mat->texture != NULL : 0;
 	int ok = shader_uniform_set(
 		&u_enable_texture_mapping,
 		1,
@@ -150,7 +150,7 @@ configure_texture_mapping(struct Texture *texture)
 			&tex_unit
 		);
 		glActiveTexture(GL_TEXTURE0 + tex_unit);
-		glBindTexture(texture->type, texture->id);
+		glBindTexture(mat->texture->type, mat->texture->id);
 		if (glGetError() != GL_NO_ERROR) {
 			err(ERR_OPENGL);
 			return 0;
@@ -211,7 +211,7 @@ draw_mesh(
 			&ub_animation,
 			skin_transforms_buffer
 		) &&
-		configure_texture_mapping(props->texture) &&
+		configure_material(props->material) &&
 		configure_shadow_mapping(props, shadow_map)
 	);
 	if (!configured) {

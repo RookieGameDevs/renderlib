@@ -29,11 +29,13 @@ static struct Mesh *mesh = NULL;
 static struct AnimationInstance *animation = NULL;
 static struct Image *image = NULL;
 static struct Texture *texture = NULL;
+static struct Material material;
 
 // terrain model
 static struct Mesh *terrain_mesh = NULL;
 static struct Image *grass_img = NULL;
-static struct Texture *terrain_tex = NULL;
+static struct Texture *terrain_texture = NULL;
+static struct Material terrain_material;
 
 static int
 init(unsigned width, unsigned height)
@@ -180,7 +182,7 @@ render(void)
 		.receive_shadows = 1,
 		.light = &light,
 		.animation = animation,
-		.texture = texture
+		.material = &material
 	};
 
 	struct MeshRenderProps terrain_props = {
@@ -191,7 +193,7 @@ render(void)
 		.receive_shadows = 1,
 		.light = &light,
 		.animation = NULL,
-		.texture = terrain_tex
+		.material = &terrain_material
 	};
 	mat_scale(&terrain_props.model, 2, 2, 1);
 
@@ -213,17 +215,21 @@ load_resources(void)
 	    !(texture = texture_from_image(image, GL_TEXTURE_2D)) ||
 	    !(terrain_mesh = mesh_from_file("tests/data/plane.mesh")) ||
 	    !(grass_img = image_from_file("tests/data/grass.jpg")) ||
-	    !(terrain_tex = texture_from_image(grass_img, GL_TEXTURE_2D))) {
+	    !(terrain_texture = texture_from_image(grass_img, GL_TEXTURE_2D))) {
 		errf(ERR_GENERIC, "failed to load resources", 0);
 		return 0;
 	}
+
+	material.texture = texture;
+	terrain_material.texture = terrain_texture;
+
 	return 1;
 }
 
 static void
 cleanup_resources(void)
 {
-	texture_free(terrain_tex);
+	texture_free(terrain_texture);
 	image_free(grass_img);
 	mesh_free(terrain_mesh);
 	texture_free(texture);

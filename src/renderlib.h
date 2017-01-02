@@ -23,6 +23,7 @@ struct Light {
  * Material.
  */
 struct Material {
+	struct Texture *texture;
 	Vec color;
 	float specular_intensity;
 	float specular_power;
@@ -38,7 +39,7 @@ struct MeshRenderProps {
 	int receive_shadows;                 // should receive shadows
 	struct Light *light;                 // light to use
 	struct AnimationInstance *animation; // animation instance
-	struct Texture *texture;             // texture to apply
+	struct Material *material;           // material to apply
 };
 
 /**

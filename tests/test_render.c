@@ -17,7 +17,7 @@ START_TEST(test_render_mesh_simple)
 		.receive_shadows = 0,
 		.animation = NULL,
 		.light = NULL,
-		.texture = NULL
+		.material = NULL
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());
@@ -32,6 +32,10 @@ START_TEST(test_render_mesh_textured)
 	struct Texture *tex = texture_from_image(img, GL_TEXTURE_2D);
 	ck_assert(tex != NULL);
 
+	struct Material mat = {
+		.texture = tex
+	};
+
 	Mat identity;
 	mat_ident(&identity);
 	struct MeshRenderProps props = {
@@ -42,7 +46,7 @@ START_TEST(test_render_mesh_textured)
 		.receive_shadows = 0,
 		.animation = NULL,
 		.light = NULL,
-		.texture = tex
+		.material = &mat
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());
@@ -64,7 +68,7 @@ START_TEST(test_render_mesh_shadowed)
 		.receive_shadows = 1,
 		.animation = NULL,
 		.light = &light,
-		.texture = NULL
+		.material = NULL
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());
@@ -89,7 +93,7 @@ START_TEST(test_render_mesh_animated)
 		.receive_shadows = 0,
 		.animation = inst,
 		.light = NULL,
-		.texture = NULL
+		.material = NULL
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());
