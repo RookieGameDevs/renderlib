@@ -120,7 +120,7 @@ draw_mesh_shadow(struct Mesh *mesh, struct MeshRenderProps *props)
 
 	// compute final model-view-projection transform in light-space
 	Mat mvp;
-	mat_mul(&props->light_space_transform, &props->model, &mvp);
+	mat_mul(&props->light->transform, &props->model, &mvp);
 
 	int configured = (
 		shader_bind(shader) &&

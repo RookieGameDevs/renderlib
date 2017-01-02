@@ -13,7 +13,11 @@ START_TEST(test_render_mesh_simple)
 		.view = identity,
 		.model = identity,
 		.projection = identity,
-		.enable_animation = 0
+		.cast_shadows = 0,
+		.receive_shadows = 0,
+		.animation = NULL,
+		.light = NULL,
+		.texture = NULL
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());
@@ -34,6 +38,10 @@ START_TEST(test_render_mesh_textured)
 		.view = identity,
 		.model = identity,
 		.projection = identity,
+		.cast_shadows = 0,
+		.receive_shadows = 0,
+		.animation = NULL,
+		.light = NULL,
 		.texture = tex
 	};
 	ck_assert(render_mesh(mesh, &props));
@@ -45,14 +53,18 @@ START_TEST(test_render_mesh_shadowed)
 {
 	Mat identity;
 	mat_ident(&identity);
+	struct Light light = {
+		.transform = identity
+	};
 	struct MeshRenderProps props = {
 		.view = identity,
 		.model = identity,
 		.projection = identity,
 		.cast_shadows = 1,
 		.receive_shadows = 1,
-		.light_space_transform = identity,
-		.enable_animation = 0
+		.animation = NULL,
+		.light = &light,
+		.texture = NULL
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());
@@ -73,8 +85,11 @@ START_TEST(test_render_mesh_animated)
 		.view = identity,
 		.model = identity,
 		.projection = identity,
-		.enable_animation = 1,
-		.animation = inst
+		.cast_shadows = 0,
+		.receive_shadows = 0,
+		.animation = inst,
+		.light = NULL,
+		.texture = NULL
 	};
 	ck_assert(render_mesh(mesh, &props));
 	ck_assert(renderer_present());

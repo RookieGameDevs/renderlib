@@ -18,9 +18,7 @@ static struct {
 	Mat projection;
 } camera;
 
-static struct {
-	Mat projection;
-} light;
+static struct Light light;
 
 static struct {
 	int play_animation;
@@ -110,7 +108,7 @@ init(unsigned width, unsigned height)
 		0.0, 0.0, 0.0, // target
 		0.0, 1.0, 0.0  // up
 	);
-	mat_mul(&proj, &view, &light.projection);
+	mat_mul(&proj, &view, &light.transform);
 
 	// initialize controls
 	controls.play_animation = 0;
@@ -178,10 +176,9 @@ render(void)
 		.model = mesh->transform,
 		.view = camera.view,
 		.projection = camera.projection,
-		.light_space_transform = light.projection,
 		.cast_shadows = 1,
 		.receive_shadows = 1,
-		.enable_animation = 1,
+		.light = &light,
 		.animation = animation,
 		.texture = texture
 	};
@@ -190,10 +187,10 @@ render(void)
 		.model = terrain_mesh->transform,
 		.view = camera.view,
 		.projection = camera.projection,
-		.light_space_transform = light.projection,
 		.cast_shadows = 0,
 		.receive_shadows = 1,
-		.enable_animation = 0,
+		.light = &light,
+		.animation = NULL,
 		.texture = terrain_tex
 	};
 	mat_scale(&terrain_props.model, 2, 2, 1);

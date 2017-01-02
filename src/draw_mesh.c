@@ -183,7 +183,7 @@ configure_shadow_mapping(
 		configured &= shader_uniform_set(
 			&u_light_space_transform,
 			1,
-			&props->light_space_transform
+			&props->light->transform
 		);
 	}
 	return configured;

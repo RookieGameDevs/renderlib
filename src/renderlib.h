@@ -34,10 +34,9 @@ struct Material {
  */
 struct MeshRenderProps {
 	Mat model, view, projection;         // transforms
-	Mat light_space_transform;           // light space transform
 	int cast_shadows;                    // should cast shadows
 	int receive_shadows;                 // should receive shadows
-	int enable_animation;                // should apply animation
+	struct Light *light;                 // light to use
 	struct AnimationInstance *animation; // animation instance
 	struct Texture *texture;             // texture to apply
 };
