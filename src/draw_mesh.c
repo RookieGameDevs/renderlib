@@ -7,14 +7,36 @@
 #include <assert.h>
 #include <stdlib.h>
 
+// defined in draw_common.c
+int
+update_skin_transforms_buffer(
+	struct AnimationInstance *inst,
+	GLuint buffer,
+	size_t offset,
+	size_t size
+);
+
+int
+configure_skinning(
+	struct AnimationInstance *inst,
+	struct Shader *shader,
+	struct ShaderUniform *u_enable_skinning,
+	struct ShaderUniform *u_skin_transforms,
+	struct ShaderUniformBlock *ub_animation,
+	GLuint buffer
+);
+
 static struct ShaderUniform u_model;
 static struct ShaderUniform u_view;
 static struct ShaderUniform u_projection;
 static struct ShaderUniform u_enable_skinning;
-static struct ShaderUniformBlock ub_skin_transforms;
+static struct ShaderUniformBlock ub_animation;
 static struct ShaderUniform u_skin_transforms;
 static struct ShaderUniform u_enable_texture_mapping;
 static struct ShaderUniform u_texture_map_sampler;
+static struct ShaderUniform u_enable_shadow_mapping;
+static struct ShaderUniform u_shadow_map_sampler;
+static struct ShaderUniform u_light_space_transform;
 static struct Shader *shader = NULL;
 
 static GLuint skin_transforms_buffer = 0;
@@ -40,6 +62,9 @@ init_mesh_pipeline(void)
 		"enable_skinning",
 		"enable_texture_mapping",
 		"texture_map_sampler",
+		"enable_shadow_mapping",
+		"shadow_map_sampler",
+		"light_space_transform",
 		NULL
 	};
 	struct ShaderUniform *uniforms[] = {
@@ -48,16 +73,19 @@ init_mesh_pipeline(void)
 		&u_projection,
 		&u_enable_skinning,
 		&u_enable_texture_mapping,
-		&u_texture_map_sampler
+		&u_texture_map_sampler,
+		&u_enable_shadow_mapping,
+		&u_shadow_map_sampler,
+		&u_light_space_transform
 	};
 
 	// uniform block names and receiver pointers
 	const char *uniform_block_names[] = {
-		"SkinTransforms",
+		"Animation",
 		NULL
 	};
 	struct ShaderUniformBlock *uniform_blocks[] = {
-		&ub_skin_transforms
+		&ub_animation
 	};
 
 	// compile mesh pipeline shader and initialize uniforms
@@ -75,7 +103,7 @@ init_mesh_pipeline(void)
 
 	// lookup skin transforms array uniform within the uniform block
 	const struct ShaderUniform *u = shader_uniform_block_get_uniform(
-		&ub_skin_transforms,
+		&ub_animation,
 		"skin_transforms[0]"
 	);
 	if (!u) {
@@ -94,77 +122,13 @@ init_mesh_pipeline(void)
 	glBindBuffer(GL_UNIFORM_BUFFER, skin_transforms_buffer);
 	glBufferData(
 		GL_UNIFORM_BUFFER,
-		ub_skin_transforms.size,
+		ub_animation.size,
 		NULL,
 		GL_DYNAMIC_DRAW
 	);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	// check for any OpenGL-related errors
-	if (glGetError() != GL_NO_ERROR) {
-		err(ERR_OPENGL);
-		return 0;
-	}
-
-	return 1;
-}
-
-static int
-configure_skinning(int enable_animation, struct AnimationInstance *inst)
-{
-	// configure uniforms
-	int configured = shader_uniform_set(
-		&u_enable_skinning,
-		1,
-		&enable_animation
-	);
-	if (!enable_animation) {
-		return configured;
-	}
-
-	// update skin transforms buffer data
-	glBindBuffer(GL_UNIFORM_BUFFER, skin_transforms_buffer);
-	struct Animation *anim = inst->anim;
-	Mat *dst = glMapBufferRange(
-		GL_UNIFORM_BUFFER,
-		u_skin_transforms.offset,
-		u_skin_transforms.size,
-		(
-			GL_MAP_WRITE_BIT |
-			GL_MAP_INVALIDATE_BUFFER_BIT |
-			GL_MAP_UNSYNCHRONIZED_BIT
-		)
-	);
-	if (!dst || glGetError() != GL_NO_ERROR) {
-		glBindBuffer(GL_UNIFORM_BUFFER, 0);
-		err(ERR_OPENGL);
-		return 0;
-	}
-	Mat tmp;
-	for (int j = 0; j < anim->skeleton->joint_count; j++) {
-		mat_mul(
-			&inst->joint_transforms[j],
-			&anim->skeleton->joints[j].inv_bind_pose,
-			&tmp
-		);
-		mat_transpose(&tmp, &dst[j]);
-	}
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	// perform indexed buffer binding
-	GLuint binding_index = 1;
-	glBindBufferBase(
-		GL_UNIFORM_BUFFER,
-		binding_index,
-		skin_transforms_buffer
-	);
-	glUniformBlockBinding(
-		shader->prog,
-		ub_skin_transforms.index,
-		binding_index
-	);
-
 	if (glGetError() != GL_NO_ERROR) {
 		err(ERR_OPENGL);
 		return 0;
@@ -201,8 +165,41 @@ configure_texture_mapping(struct Texture *texture)
 	return ok;
 }
 
+static int
+configure_shadow_mapping(
+	struct MeshRenderProps *props,
+	int shadow_map
+) {
+	int enable_shadow_mapping = (
+		props->receive_shadows &&
+		shadow_map > 0
+	);
+	int configured = shader_uniform_set(
+		&u_enable_shadow_mapping,
+		1,
+		&enable_shadow_mapping
+	);
+	if (enable_shadow_mapping) {
+		configured &= shader_uniform_set(
+			&u_shadow_map_sampler,
+			1,
+			&shadow_map
+		);
+		configured &= shader_uniform_set(
+			&u_light_space_transform,
+			1,
+			&props->light_space_transform
+		);
+	}
+	return configured;
+}
+
 int
-draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
+draw_mesh(
+	struct Mesh *mesh,
+	struct MeshRenderProps *props,
+	int shadow_map
+) {
 	assert(mesh != NULL);
 	assert(props != NULL);
 
@@ -211,8 +208,16 @@ draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 		shader_uniform_set(&u_model, 1, &props->model) &&
 		shader_uniform_set(&u_view, 1, &props->view) &&
 		shader_uniform_set(&u_projection, 1, &props->projection) &&
-		configure_skinning(props->enable_animation, props->animation) &&
-		configure_texture_mapping(props->texture)
+		configure_skinning(
+			props->animation,
+			shader,
+			&u_enable_skinning,
+			&u_skin_transforms,
+			&ub_animation,
+			skin_transforms_buffer
+		) &&
+		configure_texture_mapping(props->texture) &&
+		configure_shadow_mapping(props, shadow_map)
 	);
 	if (!configured) {
 		errf(ERR_GENERIC, "failed to configure mesh pipeline", 0);

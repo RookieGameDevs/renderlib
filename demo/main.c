@@ -21,8 +21,13 @@ static SDL_Window *window = NULL;
 static SDL_GLContext *context = NULL;
 
 static struct {
+	Mat view;
 	Mat projection;
 } camera;
+
+static struct {
+	Mat projection;
+} light;
 
 static struct {
 	int play_animation;
@@ -74,21 +79,45 @@ init(unsigned width, unsigned height)
 		return 0;
 	}
 
+	// disable vsync
 	SDL_GL_SetSwapInterval(0);
 
-	// one-off OpenGL initializations
-	glClearColor(0.3, 0.3, 0.3, 1.0);
-	glEnable(GL_DEPTH_TEST);
+	float aspect = WIDTH / (float)HEIGHT;
 
 	// initialize camera
 	mat_ident(&camera.projection);
 	mat_persp(
 		&camera.projection,
-		60.0f,
+		30.0f,
 		WIDTH / (float)HEIGHT,
-		100,
-		1000
+		1,
+		100
 	);
+	mat_lookat(
+		&camera.view,
+		5, 5, 5, // eye
+		0, 0, 0, // target
+		0, 1, 0  // up
+	);
+
+	// setup light projection-view transformation matrix
+	Mat view, proj;
+	mat_ortho(
+		&proj,
+		-5.0,
+		+5.0,
+		+5.0 * aspect,
+		-5.0 * aspect,
+		0,
+		10
+	);
+	mat_lookat(
+		&view,
+		0.0, 5.0, 5.0, // eye
+		0.0, 0.0, 0.0, // target
+		0.0, 1.0, 0.0  // up
+	);
+	mat_mul(&proj, &view, &light.projection);
 
 	// initialize controls
 	controls.play_animation = 0;
@@ -149,21 +178,14 @@ render(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Mat model, view;
+	Mat model;
 	mat_ident(&model);
-	mat_ident(&view);
-	mat_lookat(
-		&view,
-		300, 300, 0,
-		0, 0, -500,
-		0, 1, 0
-	);
-	mat_translate(&view, 0, -20, -500);
 
 	struct MeshRenderProps mesh_props = {
-		.model = model,
-		.view = view,
+		.model = mesh->transform,
+		.view = camera.view,
 		.projection = camera.projection,
+		.light_space_transform = light.projection,
 		.cast_shadows = 1,
 		.receive_shadows = 1,
 		.enable_animation = 1,
@@ -172,16 +194,16 @@ render(void)
 	};
 
 	struct MeshRenderProps terrain_props = {
-		.model = model,
-		.view = view,
+		.model = terrain_mesh->transform,
+		.view = camera.view,
 		.projection = camera.projection,
+		.light_space_transform = light.projection,
 		.cast_shadows = 0,
 		.receive_shadows = 1,
 		.enable_animation = 0,
 		.texture = terrain_tex
 	};
-	mat_scale(&terrain_props.model, 250, 250, 1);
-	mat_rotate(&terrain_props.model, 1, 0, 0, M_PI / 2);
+	mat_scale(&terrain_props.model, 2, 2, 1);
 
 	int ok = (
 		render_mesh(mesh, &mesh_props) &&

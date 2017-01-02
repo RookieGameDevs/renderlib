@@ -1,11 +1,36 @@
 #include "error.h"
 #include "renderer.h"
+#include "shadow_map.h"
 #include <GL/glew.h>
 #include <assert.h>
 
 #define RENDER_QUEUE_SIZE 1000
 
+// defined in draw_mesh.c
+int
+init_mesh_pipeline(void);
+
+int
+draw_mesh(
+	struct Mesh *mesh,
+	struct MeshRenderProps *props,
+	int shadow_map
+);
+
+// defined in draw_shadow.c
+int
+init_shadow_pipeline(void);
+
+int
+draw_mesh_shadow(struct Mesh *mesh, struct MeshRenderProps *props);
+
+enum {
+	SHADOW_PASS = 1,
+	RENDER_PASS
+};
+
 struct RenderOp {
+	int pass;
 	struct Mesh *mesh;
 	struct MeshRenderProps props;
 };
@@ -13,42 +38,44 @@ struct RenderOp {
 static struct RenderQueue {
 	struct RenderOp queue[RENDER_QUEUE_SIZE];
 	size_t len;
-} render_queue;
+} shadow_queue = { .len = 0 }, render_queue = { .len = 0 };
 
-// defined in draw.c
-int
-init_mesh_pipeline(void);
-
-int
-draw_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
+static struct ShadowMap *shadow_map = NULL;
+static int shadow_map_tu = -1;
 
 static int
-render_queue_push(const struct RenderOp *op)
+render_queue_push(struct RenderQueue *q, const struct RenderOp *op)
 {
-	if (render_queue.len == RENDER_QUEUE_SIZE) {
+	if (q->len == RENDER_QUEUE_SIZE) {
 		err(ERR_RENDER_QUEUE_FULL);
 		return 0;
 	}
-	render_queue.queue[render_queue.len++] = *op;
+	q->queue[q->len++] = *op;
 	return 1;
 }
 
 static void
-render_queue_flush(void)
+render_queue_flush(struct RenderQueue *q)
 {
-	render_queue.len = 0;
+	q->len = 0;
 }
 
 static int
-render_queue_exec(void)
+render_queue_exec(struct RenderQueue *q)
 {
-	for (int i = 0; i < render_queue.len; i++) {
-		struct RenderOp *op = &render_queue.queue[i];
-		if (!draw_mesh(op->mesh, &op->props)) {
-			return 0;
+	int ok = 1;
+	for (int i = 0; i < q->len; i++) {
+		struct RenderOp *op = &q->queue[i];
+		switch (op->pass) {
+		case SHADOW_PASS:
+			ok &= draw_mesh_shadow(op->mesh, &op->props);
+			break;
+		case RENDER_PASS:
+			ok &= draw_mesh(op->mesh, &op->props, shadow_map_tu);
+			break;
 		}
 	}
-	return 1;
+	return ok;
 }
 
 int
@@ -63,11 +90,30 @@ renderer_init(void)
 	// silence any errors produced during GLEW initialization
 	glGetError();
 
+	// one-off OpenGL initializations
+	glClearColor(0.3, 0.3, 0.3, 1.0);
+	glEnable(GL_DEPTH_TEST);
+
 	// initialize pipelines
-	if (!init_mesh_pipeline()) {
+	if (!init_mesh_pipeline() ||
+	    !init_shadow_pipeline()) {
+		errf(ERR_GENERIC, "pipelines initialization failed", 0);
 		renderer_shutdown();
 		return 0;
 	}
+
+	// create shadow map
+	if (!(shadow_map = shadow_map_new(1024, 1024))) {
+		errf(ERR_GENERIC, "shadow map creation failed", 0);
+		return 0;
+	}
+
+	// reserve a texture unit for shadow map
+	glGetIntegerv(
+		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,
+		&shadow_map_tu
+	);
+	shadow_map_tu -= 1;
 
 	return 1;
 }
@@ -75,22 +121,64 @@ renderer_init(void)
 int
 renderer_present(void)
 {
-	int ok = render_queue_exec();
-	render_queue_flush();
+	int ok = 1;
+
+	// shadows pass
+	int viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	glViewport(0, 0, shadow_map->width, shadow_map->height);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map->fbo);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	ok = render_queue_exec(&shadow_queue);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+	if (!ok) {
+		errf(ERR_GENERIC, "shadow pass failed", 0);
+		goto cleanup;
+	}
+
+	// render pass
+	glActiveTexture(GL_TEXTURE0 + shadow_map_tu);
+	glBindTexture(GL_TEXTURE_2D, shadow_map->texture);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	ok = render_queue_exec(&render_queue);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	if (!ok) {
+		errf(ERR_GENERIC, "render pass failed", 0);
+		goto cleanup;
+	}
+
+cleanup:
+	render_queue_flush(&shadow_queue);
+	render_queue_flush(&render_queue);
+
 	return ok;
 }
 
 void
 renderer_shutdown(void)
 {
-	// TODO
+	shadow_map_free(shadow_map);
+	shadow_map = NULL;
 }
 
 int
 render_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
+	int ok = 1;
 	struct RenderOp op = {
 		.mesh = mesh,
 		.props = *props
 	};
-	return render_queue_push(&op);
+
+	// shadow pass
+	if (props->cast_shadows) {
+		op.pass = SHADOW_PASS;
+		ok &= render_queue_push(&shadow_queue, &op);
+	}
+
+	// render pass
+	op.pass = RENDER_PASS;
+	ok &= render_queue_push(&render_queue, &op);
+
+	return ok;
 }

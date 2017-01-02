@@ -15,7 +15,7 @@ uniform mat4 view;
 uniform mat4 projection;
 
 uniform bool enable_skinning = false;
-layout(shared) uniform SkinTransforms {
+layout(shared) uniform Animation {
 	mat4 skin_transforms[100];
 };
 
@@ -38,7 +38,7 @@ void apply_anim(inout vec3 pos, inout vec3 normal, ivec4 joints, vec4 weights)
 }
 
 uniform bool enable_shadow_mapping = false;
-uniform mat4 light_projection;
+uniform mat4 light_space_transform;
 out vec4 light_space_position;
 
 void main()
@@ -56,7 +56,7 @@ void main()
 	position = (model * vec4(position, 1.0)).xyz;
 
 	if (enable_shadow_mapping) {
-		light_space_position = light_projection * vec4(position, 1.0);
+		light_space_position = light_space_transform * vec4(position, 1.0);
 	}
 
 	// view space

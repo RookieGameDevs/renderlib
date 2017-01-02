@@ -8,7 +8,6 @@ out vec4 color;
 
 /*** LIGTHING ***/
 uniform bool enable_lighting = false;
-in vec4 light_space_position;
 uniform vec3 eye;
 uniform struct Light {
 	vec3 direction;
@@ -63,6 +62,7 @@ uniform sampler2D texture_map_sampler;
 
 /*** SHADOW MAPPING ***/
 uniform bool enable_shadow_mapping = false;
+in vec4 light_space_position;
 uniform sampler2D shadow_map_sampler;
 
 void apply_shadow(inout vec4 color, sampler2D shadow_map_sampler, vec4 position)

@@ -27,6 +27,7 @@ renderer_shutdown(void);
  */
 struct MeshRenderProps {
 	Mat model, view, projection;         // transforms
+	Mat light_space_transform;           // light space transform
 	int cast_shadows;                    // should cast shadows
 	int receive_shadows;                 // should receive shadows
 	int enable_animation;                // should apply animation
