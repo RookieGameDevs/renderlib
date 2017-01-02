@@ -13,6 +13,8 @@
 static SDL_Window *window = NULL;
 static SDL_GLContext *context = NULL;
 
+static Mat ui_projection;
+
 static struct {
 	Vec eye;
 	Mat view;
@@ -37,6 +39,10 @@ static struct Mesh *terrain_mesh = NULL;
 static struct Image *grass_img = NULL;
 static struct Texture *terrain_texture = NULL;
 static struct Material terrain_material;
+
+// fps counter
+static struct Text *fps_text = NULL;
+static struct Font *font = NULL;
 
 static int
 init(unsigned width, unsigned height)
@@ -77,6 +83,18 @@ init(unsigned width, unsigned height)
 	SDL_GL_SetSwapInterval(0);
 
 	float aspect = WIDTH / (float)HEIGHT;
+
+	// initialize 2D projection matrix
+	mat_ident(&ui_projection);
+	mat_ortho(
+		&ui_projection,
+		-WIDTH / 2,
+		+WIDTH / 2,
+		+HEIGHT / 2,
+		-HEIGHT / 2,
+		0,
+		1
+	);
 
 	// initialize camera
 	camera.eye = vec(5, 5, 5, 0);
@@ -178,8 +196,8 @@ render(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	Mat model;
-	mat_ident(&model);
+	Mat identity;
+	mat_ident(&identity);
 
 	struct MeshRenderProps mesh_props = {
 		.eye = camera.eye,
@@ -206,9 +224,19 @@ render(void)
 	};
 	mat_scale(&terrain_props.model, 2, 2, 1);
 
+	struct TextRenderProps text_props = {
+		.model = identity,
+		.view = identity,
+		.projection = ui_projection,
+		.color = vec(0.5, 1.0, 0.5, 1.0),
+		.opacity = 1.0
+	};
+	mat_translate(&text_props.model, -WIDTH / 2 + 10, HEIGHT / 2 - 10, 0);
+
 	int ok = (
 		render_mesh(mesh, &mesh_props) &&
 		render_mesh(terrain_mesh, &terrain_props) &&
+		render_text(fps_text, &text_props) &&
 		renderer_present()
 	);
 	SDL_GL_SwapWindow(window);
@@ -224,7 +252,9 @@ load_resources(void)
 	    !(texture = texture_from_image(image, GL_TEXTURE_2D)) ||
 	    !(terrain_mesh = mesh_from_file("tests/data/plane.mesh")) ||
 	    !(grass_img = image_from_file("tests/data/grass.jpg")) ||
-	    !(terrain_texture = texture_from_image(grass_img, GL_TEXTURE_2D))) {
+	    !(terrain_texture = texture_from_image(grass_img, GL_TEXTURE_2D)) ||
+	    !(font = font_from_file("tests/data/courier.ttf", 16)) ||
+	    !(fps_text = text_new(font))) {
 		errf(ERR_GENERIC, "failed to load resources", 0);
 		return 0;
 	}
@@ -242,6 +272,8 @@ load_resources(void)
 static void
 cleanup_resources(void)
 {
+	text_free(fps_text);
+	font_free(font);
 	texture_free(terrain_texture);
 	image_free(grass_img);
 	mesh_free(terrain_mesh);
@@ -261,6 +293,7 @@ update_stats(int fps, float render_time)
 	str[len] = '\0'; // NUL-terminator
 	snprintf(str, len, fmt, fps, render_time);
 	SDL_SetWindowTitle(window, str);
+	text_set_string(fps_text, str);
 }
 
 static struct timespec

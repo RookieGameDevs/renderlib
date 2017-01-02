@@ -23,6 +23,13 @@ init_shadow_pipeline(void);
 int
 draw_mesh_shadow(struct Mesh *mesh, struct MeshRenderProps *props);
 
+// defined in draw_text.c
+int
+init_text_pipeline(void);
+
+int
+draw_text(struct Text *text, struct TextRenderProps *props);
+
 enum {
 	SHADOW_PASS = 1,
 	RENDER_PASS
@@ -30,8 +37,17 @@ enum {
 
 struct RenderOp {
 	int pass;
-	struct Mesh *mesh;
-	struct MeshRenderProps props;
+	union {
+		struct {
+			struct Mesh *mesh;
+			struct MeshRenderProps props;
+		} mesh;
+		struct {
+			struct Text *text;
+			struct TextRenderProps props;
+		} text;
+	};
+	int (*exec)(struct RenderOp *op);
 };
 
 static struct RenderQueue {
@@ -60,19 +76,33 @@ render_queue_flush(struct RenderQueue *q)
 }
 
 static int
+exec_mesh_op(struct RenderOp *op)
+{
+	int ok = 1;
+	switch (op->pass) {
+	case SHADOW_PASS:
+		ok &= draw_mesh_shadow(op->mesh.mesh, &op->mesh.props);
+		break;
+	case RENDER_PASS:
+		ok &= draw_mesh(op->mesh.mesh, &op->mesh.props, shadow_map_tu);
+		break;
+	}
+	return ok;
+}
+
+static int
+exec_text_op(struct RenderOp *op)
+{
+	return draw_text(op->text.text, &op->text.props);
+}
+
+static int
 render_queue_exec(struct RenderQueue *q)
 {
 	int ok = 1;
 	for (int i = 0; i < q->len; i++) {
 		struct RenderOp *op = &q->queue[i];
-		switch (op->pass) {
-		case SHADOW_PASS:
-			ok &= draw_mesh_shadow(op->mesh, &op->props);
-			break;
-		case RENDER_PASS:
-			ok &= draw_mesh(op->mesh, &op->props, shadow_map_tu);
-			break;
-		}
+		ok &= op->exec(op);
 	}
 	return ok;
 }
@@ -95,7 +125,8 @@ renderer_init(void)
 
 	// initialize pipelines
 	if (!init_mesh_pipeline() ||
-	    !init_shadow_pipeline()) {
+	    !init_shadow_pipeline() ||
+	    !init_text_pipeline()) {
 		errf(ERR_GENERIC, "pipelines initialization failed", 0);
 		renderer_shutdown();
 		return 0;
@@ -165,8 +196,11 @@ int
 render_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 	int ok = 1;
 	struct RenderOp op = {
-		.mesh = mesh,
-		.props = *props
+		.mesh = {
+			.mesh = mesh,
+			.props = *props
+		},
+		.exec = exec_mesh_op
 	};
 
 	// shadow pass
@@ -180,4 +214,18 @@ render_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 	ok &= render_queue_push(&render_queue, &op);
 
 	return ok;
+}
+
+int
+render_text(struct Text *text, struct TextRenderProps *props)
+{
+	struct RenderOp op = {
+		.pass = RENDER_PASS,
+		.text = {
+			.text = text,
+			.props = *props
+		},
+		.exec = exec_text_op
+	};
+	return render_queue_push(&render_queue, &op);
 }

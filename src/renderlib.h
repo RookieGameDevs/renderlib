@@ -1,12 +1,12 @@
-#include <matlib.h>
-
 #include "anim.h"
 #include "error.h"
 #include "font.h"
 #include "image.h"
 #include "mesh.h"
 #include "shader.h"
+#include "text.h"
 #include "texture.h"
+#include <matlib.h>
 
 /**
  * Light.
@@ -45,6 +45,15 @@ struct MeshRenderProps {
 };
 
 /**
+ * Text render properties.
+ */
+struct TextRenderProps {
+	Mat model, view, projection;  // transforms
+	Vec color;                    // text color
+	float opacity;                // text opacity
+};
+
+/**
  * Initialize renderer library.
  */
 int
@@ -67,3 +76,9 @@ renderer_shutdown(void);
  */
 int
 render_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
+
+/**
+ * Render text.
+ */
+int
+render_text(struct Text *text, struct TextRenderProps *props);
