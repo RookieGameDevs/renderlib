@@ -15,6 +15,7 @@ uniform struct Light {
 	float ambient_intensity;
 	float diffuse_intensity;
 } light;
+
 uniform struct Material {
 	float specular_intensity;
 	float specular_power;

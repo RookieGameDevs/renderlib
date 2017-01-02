@@ -25,6 +25,7 @@ struct Light {
 struct Material {
 	struct Texture *texture;
 	Vec color;
+	int receive_light;
 	float specular_intensity;
 	float specular_power;
 };
@@ -34,6 +35,7 @@ struct Material {
  * Mesh render properties.
  */
 struct MeshRenderProps {
+	Vec eye;                             // viewer position
 	Mat model, view, projection;         // transforms
 	int cast_shadows;                    // should cast shadows
 	int receive_shadows;                 // should receive shadows

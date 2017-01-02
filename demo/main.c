@@ -14,6 +14,7 @@ static SDL_Window *window = NULL;
 static SDL_GLContext *context = NULL;
 
 static struct {
+	Vec eye;
 	Mat view;
 	Mat projection;
 } camera;
@@ -78,6 +79,7 @@ init(unsigned width, unsigned height)
 	float aspect = WIDTH / (float)HEIGHT;
 
 	// initialize camera
+	camera.eye = vec(5, 5, 5, 0);
 	mat_ident(&camera.projection);
 	mat_persp(
 		&camera.projection,
@@ -93,7 +95,12 @@ init(unsigned width, unsigned height)
 		0, 1, 0  // up
 	);
 
-	// setup light projection-view transformation matrix
+	// initialize light
+	light.direction = vec(0, -5, -5, 0);
+	vec_norm(&light.direction);
+	light.color = vec(1, 1, 1, 1);
+	light.ambient_intensity = 0.3;
+	light.diffuse_intensity = 1.0;
 	Mat view, proj;
 	mat_ortho(
 		&proj,
@@ -175,6 +182,7 @@ render(void)
 	mat_ident(&model);
 
 	struct MeshRenderProps mesh_props = {
+		.eye = camera.eye,
 		.model = mesh->transform,
 		.view = camera.view,
 		.projection = camera.projection,
@@ -186,6 +194,7 @@ render(void)
 	};
 
 	struct MeshRenderProps terrain_props = {
+		.eye = camera.eye,
 		.model = terrain_mesh->transform,
 		.view = camera.view,
 		.projection = camera.projection,
@@ -221,7 +230,11 @@ load_resources(void)
 	}
 
 	material.texture = texture;
+	material.receive_light = 1;
+	material.specular_intensity = 0.3;
+	material.specular_power = 4;
 	terrain_material.texture = terrain_texture;
+	terrain_material.receive_light = 1;
 
 	return 1;
 }

@@ -32,6 +32,14 @@ static struct ShaderUniform u_texture_map_sampler;
 static struct ShaderUniform u_enable_shadow_mapping;
 static struct ShaderUniform u_shadow_map_sampler;
 static struct ShaderUniform u_light_space_transform;
+static struct ShaderUniform u_enable_lighting;
+static struct ShaderUniform u_eye;
+static struct ShaderUniform u_light_direction;
+static struct ShaderUniform u_light_color;
+static struct ShaderUniform u_light_ambient_intensity;
+static struct ShaderUniform u_light_diffuse_intensity;
+static struct ShaderUniform u_material_specular_intensity;
+static struct ShaderUniform u_material_specular_power;
 static struct Shader *shader = NULL;
 
 static GLuint skin_transforms_buffer = 0;
@@ -60,6 +68,14 @@ init_mesh_pipeline(void)
 		"enable_shadow_mapping",
 		"shadow_map_sampler",
 		"light_space_transform",
+		"enable_lighting",
+		"eye",
+		"light.direction",
+		"light.color",
+		"light.ambient_intensity",
+		"light.diffuse_intensity",
+		"material.specular_intensity",
+		"material.specular_power",
 		NULL
 	};
 	struct ShaderUniform *uniforms[] = {
@@ -71,7 +87,15 @@ init_mesh_pipeline(void)
 		&u_texture_map_sampler,
 		&u_enable_shadow_mapping,
 		&u_shadow_map_sampler,
-		&u_light_space_transform
+		&u_light_space_transform,
+		&u_enable_lighting,
+		&u_eye,
+		&u_light_direction,
+		&u_light_color,
+		&u_light_ambient_intensity,
+		&u_light_diffuse_intensity,
+		&u_material_specular_intensity,
+		&u_material_specular_power
 	};
 
 	// uniform block names and receiver pointers
@@ -133,9 +157,9 @@ init_mesh_pipeline(void)
 }
 
 static int
-configure_material(struct Material *mat)
+configure_texture_mapping(struct Texture *texture)
 {
-	int enable_texture_mapping = mat ? mat->texture != NULL : 0;
+	int enable_texture_mapping = texture != NULL;
 	int ok = shader_uniform_set(
 		&u_enable_texture_mapping,
 		1,
@@ -150,7 +174,7 @@ configure_material(struct Material *mat)
 			&tex_unit
 		);
 		glActiveTexture(GL_TEXTURE0 + tex_unit);
-		glBindTexture(mat->texture->type, mat->texture->id);
+		glBindTexture(texture->type, texture->id);
 		if (glGetError() != GL_NO_ERROR) {
 			err(ERR_OPENGL);
 			return 0;
@@ -161,12 +185,70 @@ configure_material(struct Material *mat)
 }
 
 static int
+configure_lighting(struct MeshRenderProps *props)
+{
+	int enable_lighting = (
+		props->light &&
+		props->material &&
+		props->material->receive_light
+	);
+	int configured = shader_uniform_set(
+		&u_enable_lighting,
+		1,
+		&enable_lighting
+	);
+
+	if (enable_lighting) {
+		configured &= (
+			shader_uniform_set(
+				&u_eye,
+				1,
+				&props->eye
+			) &&
+			shader_uniform_set(
+				&u_material_specular_intensity,
+				1,
+				&props->material->specular_intensity
+			) &&
+			shader_uniform_set(
+				&u_material_specular_power,
+				1,
+				&props->material->specular_power
+			) &&
+			shader_uniform_set(
+				&u_light_direction,
+				1,
+				&props->light->direction
+			) &&
+			shader_uniform_set(
+				&u_light_color,
+				1,
+				&props->light->color
+			) &&
+			shader_uniform_set(
+				&u_light_ambient_intensity,
+				1,
+				&props->light->ambient_intensity
+			) &&
+			shader_uniform_set(
+				&u_light_diffuse_intensity,
+				1,
+				&props->light->diffuse_intensity
+			)
+		);
+	}
+
+	return configured;
+}
+
+static int
 configure_shadow_mapping(
 	struct MeshRenderProps *props,
 	int shadow_map
 ) {
 	int enable_shadow_mapping = (
 		props->receive_shadows &&
+		props->light &&
 		shadow_map > 0
 	);
 	int configured = shader_uniform_set(
@@ -211,8 +293,11 @@ draw_mesh(
 			&ub_animation,
 			skin_transforms_buffer
 		) &&
-		configure_material(props->material) &&
-		configure_shadow_mapping(props, shadow_map)
+		configure_texture_mapping(
+			props->material ? props->material->texture : NULL
+		) &&
+		configure_shadow_mapping(props, shadow_map) &&
+		configure_lighting(props)
 	);
 	if (!configured) {
 		errf(ERR_GENERIC, "failed to configure mesh pipeline", 0);
