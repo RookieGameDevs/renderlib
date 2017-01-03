@@ -127,14 +127,14 @@ renderer_init(void)
 	if (!init_mesh_pipeline() ||
 	    !init_shadow_pipeline() ||
 	    !init_text_pipeline()) {
-		errf(ERR_GENERIC, "pipelines initialization failed", 0);
+		errf(ERR_GENERIC, "pipelines initialization failed");
 		renderer_shutdown();
 		return 0;
 	}
 
 	// create shadow map
 	if (!(shadow_map = shadow_map_new(1024, 1024))) {
-		errf(ERR_GENERIC, "shadow map creation failed", 0);
+		errf(ERR_GENERIC, "shadow map creation failed");
 		return 0;
 	}
 
@@ -163,7 +163,7 @@ renderer_present(void)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 	if (!ok) {
-		errf(ERR_GENERIC, "shadow pass failed", 0);
+		errf(ERR_GENERIC, "shadow pass failed");
 		goto cleanup;
 	}
 
@@ -174,7 +174,7 @@ renderer_present(void)
 	ok = render_queue_exec(&render_queue);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	if (!ok) {
-		errf(ERR_GENERIC, "render pass failed", 0);
+		errf(ERR_GENERIC, "render pass failed");
 		goto cleanup;
 	}
 

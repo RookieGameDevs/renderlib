@@ -300,7 +300,7 @@ draw_mesh(
 		configure_lighting(props)
 	);
 	if (!configured) {
-		errf(ERR_GENERIC, "failed to configure mesh pipeline", 0);
+		errf(ERR_GENERIC, "failed to configure mesh pipeline");
 		return 0;
 	}
 

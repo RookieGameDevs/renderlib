@@ -99,7 +99,7 @@ draw_text(struct Text *text, struct TextRenderProps *props)
 		shader_uniform_set(&u_opacity, 1, &props->opacity)
 	);
 	if (!configured) {
-		errf(ERR_GENERIC, "failed to configure text pipeline", 0);
+		errf(ERR_GENERIC, "failed to configure text pipeline");
 		return 0;
 	}
 

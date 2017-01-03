@@ -31,7 +31,7 @@ enum {
 };
 
 #define err(code) error_push(code, NULL, __FILE__, __func__, __LINE__)
-#define errf(code, fmt, ...) error_push(code, string_fmt(fmt, __VA_ARGS__), __FILE__, __func__, __LINE__)
+#define errf(code, ...) error_push(code, string_fmt(__VA_ARGS__), __FILE__, __func__, __LINE__)
 
 void
 error_push(int code, char *descr, const char *file, const char *context, int line);

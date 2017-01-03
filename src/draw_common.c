@@ -23,8 +23,7 @@ update_skin_transforms_buffer(
 	if (size < inst->anim->skeleton->joint_count * sizeof(Mat)) {
 		errf(
 			ERR_NO_MEM,
-			"buffer too small for animation skin transforms",
-			0
+			"buffer too small for animation skin transforms"
 		);
 		return 0;
 	}
