@@ -53,7 +53,7 @@ texture_from_image(struct Image *image, GLenum type)
 	glTexImage2D(
 		type,
 		0,
-		format,
+		internal_format,
 		image->width,
 		image->height,
 		0,
