@@ -1,4 +1,6 @@
-#define _POSIX_C_SOURCE 199309L
+#ifndef __APPLE__
+# define _POSIX_C_SOURCE 199309L
+#endif
 
 #include <GL/glew.h>
 #include <SDL.h>
