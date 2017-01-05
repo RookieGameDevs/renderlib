@@ -3,6 +3,7 @@
 #include FT_GLYPH_H
 
 #include "error.h"
+#include "file_utils.h"
 #include "font.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -28,7 +29,6 @@ static int
 init_freetype(void)
 {
 	if (FT_Init_FreeType(&ft) != 0) {
-		err(ERR_FREETYPE);
 		return 0;
 	}
 	atexit(shutdown_freetype);
@@ -196,18 +196,20 @@ init_font(struct Font *font, FT_Face face)
 }
 
 struct Font*
-font_from_file(const char *filename, unsigned size)
+font_from_buffer(const char *data, size_t size, unsigned pt)
 {
-	assert(filename != NULL);
-	assert(strlen(filename) > 0);
+	assert(data != NULL);
+	assert(size > 0);
+	assert(pt > 0);
 
 	FT_Face face = NULL;
 	struct Font *font = NULL;
 
 	if ((!ft_initialized && !init_freetype())) {
+		err(ERR_FREETYPE);
 		goto error;
-	} else if (FT_New_Face(ft, filename, 0, &face) != 0 ||
-	           FT_Set_Pixel_Sizes(face, 0, size) != 0) {
+	} else if (FT_New_Memory_Face(ft, (FT_Byte*)data, size, 0, &face) != 0 ||
+	           FT_Set_Pixel_Sizes(face, 0, pt) != 0) {
 		err(ERR_INVALID_FONT);
 		goto error;
 	} else if (!(font = malloc(sizeof(struct Font)))) {
@@ -228,6 +230,28 @@ error:
 	font_free(font);
 	font = NULL;
 	goto cleanup;
+}
+
+struct Font*
+font_from_file(const char *filename, unsigned pt)
+{
+	assert(filename != NULL);
+	assert(strlen(filename) > 0);
+	assert(pt > 0);
+
+	// attempt to read the font file
+	char *data = NULL;
+	size_t size = file_read(filename, &data);
+	if (!size) {
+		return NULL;
+	}
+
+	// create font from just read contents
+	struct Font *font = font_from_buffer(data, size, pt);
+
+	free(data);
+
+	return font;
 }
 
 const struct Character*
