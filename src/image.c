@@ -1,35 +1,51 @@
 #include "error.h"
+#include "file_utils.h"
 #include "image.h"
 #include <assert.h>
-#include <jpeglib.h>
 #include <jerror.h>
+#include <jpeglib.h>
 #include <png.h>
 #include <setjmp.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static void*
-read_png(const char *filename, unsigned *r_width, unsigned *r_height, int *fmt) {
-	assert(filename != NULL);
+struct Buffer {
+	size_t size;
+	size_t offset;
+	void *data;
+};
 
+static size_t
+buffer_read(struct Buffer *buf, void *dst, size_t len)
+{
+	if (buf->offset + len > buf->size) {
+		return 0;
+	}
+	memcpy(dst, buf->data + buf->offset, len);
+	buf->offset += len;
+	return len;
+}
+
+static void
+user_png_read_func(png_structp png_ptr, png_bytep dst, png_size_t len)
+{
+	struct Buffer *buf = png_get_io_ptr(png_ptr);
+	if (!buffer_read(buf, dst, len)) {
+		png_error(png_ptr, "end of buffer");
+	}
+}
+
+static void*
+read_png(struct Buffer *buf, unsigned *r_width, unsigned *r_height, int *fmt) {
 	void *data = NULL;
 	png_structp png_ptr = NULL;
 	png_infop info_ptr = NULL;
 	png_bytepp rows = NULL;
 
+	// attempt to read 8 bytes and check whether we're reading a PNG file
 	size_t hdr_size = 8;
 	unsigned char hdr[hdr_size];
-
-	// open the given file
-	FILE *fp = fopen(filename, "r");
-	if (!fp) {
-		err(ERR_NO_FILE);
-		goto error;
-	}
-
-	// attempt to read 8 bytes and check whether we're reading a PNG file
-	if (fread(hdr, 1, hdr_size, fp) != hdr_size ||
+	if (buffer_read(buf, hdr, hdr_size) != hdr_size ||
 	    png_sig_cmp(hdr, 0, hdr_size) != 0) {
 		err(ERR_INVALID_IMAGE);
 		goto error;
@@ -59,8 +75,8 @@ read_png(const char *filename, unsigned *r_width, unsigned *r_height, int *fmt) 
 		goto error;
 	}
 
-	// init file reading IO
-	png_init_io(png_ptr, fp);
+	// init reading
+	png_set_read_fn(png_ptr, buf, user_png_read_func);
 	png_set_sig_bytes(png_ptr, hdr_size);
 
 	// read image information
@@ -141,9 +157,6 @@ read_png(const char *filename, unsigned *r_width, unsigned *r_height, int *fmt) 
 cleanup:
 	free(rows);
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-	if (fp) {
-		fclose(fp);
-	}
 	return data;
 
 error:
@@ -153,25 +166,19 @@ error:
 }
 
 static void*
-read_jpeg(const char *filename, unsigned *width, unsigned *height, int *fmt)
+read_jpeg(struct Buffer *buf, unsigned *width, unsigned *height, int *fmt)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	void *data = NULL;
-
-	FILE *fp = fopen(filename, "r");
-	if (!fp) {
-		err(ERR_NO_FILE);
-		return NULL;
-	}
 
 	// initialize JPEG error manager and decompressor
 	jpeg_std_error(&jerr);
 	cinfo.err = &jerr;
 	jpeg_create_decompress(&cinfo);
 
-	// feed the file pointer to decompressor
-	jpeg_stdio_src(&cinfo, fp);
+	// feed the buffer to decompressor
+	jpeg_mem_src(&cinfo, buf->data, buf->size);
 
 	// read the header
 	if (jpeg_read_header(&cinfo, 1) != JPEG_HEADER_OK) {
@@ -219,10 +226,6 @@ cleanup:
 	// destroy decompressor
 	jpeg_destroy_decompress(&cinfo);
 
-	if (fp) {
-		fclose(fp);
-	}
-
 	return data;
 
 error:
@@ -232,47 +235,83 @@ error:
 }
 
 struct Image*
-image_from_file(const char *filename)
+image_from_buffer(const char *data, size_t size, int codec)
 {
-	assert(filename != NULL);
+	assert(data != NULL);
+	assert(size > 0);
 
 	struct Image *image = NULL;
 
-	// pick image reader function based on file extension
-	const char *ext = strrchr(filename, '.');
-	void* (*reader)(const char*, unsigned*, unsigned*, int*) = NULL;
-	if (strncmp(ext, ".png", 3) == 0) {
+	// pick proper reader
+	void* (*reader)(struct Buffer*, unsigned*, unsigned*, int*) = NULL;
+	switch (codec) {
+	case IMAGE_CODEC_PNG:
 		reader = read_png;
-	} else if (strncmp(ext, ".jpg", 3) == 0 ||
-	           strncmp(ext, ".jpeg", 4) == 0) {
+		break;
+	case IMAGE_CODEC_JPEG:
 		reader = read_jpeg;
-	} else {
+		break;
+	}
+	if (!reader) {
 		err(ERR_UNSUPPORTED_IMAGE);
-		return 0;
+		return NULL;
 	}
 
 	// allocate image struct
 	if (!(image = malloc(sizeof(struct Image)))) {
 		err(ERR_NO_MEM);
-		goto error;
+		return NULL;
 	}
 
 	// read image
+	struct Buffer buffer = {
+		.data = (void*)data,
+		.size = size,
+		.offset = 0
+	};
 	image->data = reader(
-		filename,
+		&buffer,
 		&image->width,
 		&image->height,
 		&image->format
 	);
 	if (!image->data) {
-		goto error;
+		err(ERR_INVALID_IMAGE);
+		image_free(image);
+		return NULL;
 	}
 
 	return image;
+}
 
-error:
-	image_free(image);
-	return NULL;
+struct Image*
+image_from_file(const char *filename)
+{
+	assert(filename != NULL);
+
+	// pick image reader function based on file extension
+	const char *ext = strrchr(filename, '.');
+	int codec = 0;
+	if (strncmp(ext, ".png", 3) == 0) {
+		codec = IMAGE_CODEC_PNG;
+	} else if (strncmp(ext, ".jpg", 3) == 0 ||
+	           strncmp(ext, ".jpeg", 4) == 0) {
+		codec = IMAGE_CODEC_JPEG;
+	}
+
+	// read file contents
+	char *data = NULL;
+	size_t size = file_read(filename, &data);
+	if (!size) {
+		return NULL;
+	}
+
+	// create image from just read file contents
+	struct Image *image = image_from_buffer(data, size, codec);
+
+	free(data);
+
+	return image;
 }
 
 void
