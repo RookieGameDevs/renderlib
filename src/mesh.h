@@ -25,7 +25,7 @@ struct Mesh*
 mesh_from_file(const char *filename);
 
 struct Mesh*
-mesh_from_buffer(const char *data, size_t data_size);
+mesh_from_buffer(const void *data, size_t data_size);
 
 struct Mesh*
 mesh_new(

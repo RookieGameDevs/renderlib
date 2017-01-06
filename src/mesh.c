@@ -202,7 +202,7 @@ mesh_from_file(const char *filename)
 
 
 struct Mesh*
-mesh_from_buffer(const char *data, size_t size)
+mesh_from_buffer(const void *data, size_t size)
 {
 	struct Mesh *m = NULL;
 	void *vertex_data = NULL;

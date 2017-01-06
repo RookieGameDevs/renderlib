@@ -9,7 +9,10 @@ ffi.set_source(
     #include "renderlib.h"
     #include <GL/glew.h>
     """,
-    include_dirs=['../../build/include/renderlib'],
+    include_dirs=[
+        '../../build/include/renderlib',
+        '../../deps/matlib/build/include'
+    ],
     library_dirs=['../../build/lib'],
     libraries=['render'])
 
@@ -38,6 +41,17 @@ ffi.cdef(
     renderer_shutdown(void);
     """)
 
+# Mesh API
+ffi.cdef(
+    """
+    struct Mesh;
+
+    struct Mesh*
+    mesh_from_file(const char *filename);
+
+    struct Mesh*
+    mesh_from_buffer(const void *data, size_t data_size);
+    """)
 
 if __name__ == '__main__':
     ffi.compile(verbose=True)
