@@ -196,7 +196,7 @@ init_font(struct Font *font, FT_Face face)
 }
 
 struct Font*
-font_from_buffer(const char *data, size_t size, unsigned pt)
+font_from_buffer(const void *data, size_t size, unsigned pt)
 {
 	assert(data != NULL);
 	assert(size > 0);

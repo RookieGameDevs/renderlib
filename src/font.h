@@ -11,7 +11,7 @@ struct Character {
 struct Font;
 
 struct Font*
-font_from_buffer(const char *data, size_t size, unsigned pt);
+font_from_buffer(const void *data, size_t size, unsigned pt);
 
 struct Font*
 font_from_file(const char *filename, unsigned pt);

@@ -56,5 +56,20 @@ ffi.cdef(
     mesh_free(struct Mesh *mesh);
     """)
 
+# Font API
+ffi.cdef(
+    """
+    struct Font;
+
+    struct Font*
+    font_from_buffer(const void *data, size_t size, unsigned pt);
+
+    struct Font*
+    font_from_file(const char *filename, unsigned pt);
+
+    void
+    font_free(struct Font *font);
+    """)
+
 if __name__ == '__main__':
     ffi.compile(verbose=True)
