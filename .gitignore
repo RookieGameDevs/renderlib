@@ -2,3 +2,5 @@ build/
 .lock*
 .waf*
 .DS_Store
+*.pyc
+__pycache__

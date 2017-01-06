@@ -125,30 +125,48 @@ def build(bld):
         kwargs['framework'] = ['OpenGL', 'Accelerate']
 
     bld.shlib(
-        target='lib/render',
-        source=bld.path.ant_glob('src/**/*.c'),
+        target='render',
+        source=bld.path.ant_glob('src/**/*.c', excl=['src/python']),
         uselib=deps,
+        install_path='${PREFIX}/lib',
         **kwargs)
+
+    bld.install_files(
+        '${PREFIX}/include/renderlib',
+        [
+            'src/anim.h',
+            'src/string_utils.h',
+            'src/image.h',
+            'src/text.h',
+            'src/renderlib.h',
+            'src/error.h',
+            'src/font.h',
+            'src/mesh.h',
+            'src/shader.h',
+            'src/texture.h',
+        ])
 
     rpath = bld.bldnode.find_or_declare('lib').abspath()
     print(rpath)
 
     if bld.env.with_tests:
         bld.program(
-            target='bin/tests',
-            source=bld.path.ant_glob('tests/**/*.c'),
+            target='test-suite',
+            source=bld.path.ant_glob('tests/**/*.c', excl=['tests/python']),
             includes=['src'],
             uselib=deps + ['check', 'sdl'],
             rpath=[rpath],
-            use=['lib/render'],
+            use=['render'],
+            install_path=None,
             **kwargs)
 
     if bld.env.with_demo:
         bld.program(
-            target='bin/demo',
+            target='renderlib-demo',
             source=bld.path.ant_glob('demo/**/*.c'),
             includes=['src'],
             uselib=deps + ['sdl'],
             rpath=[rpath],
-            use=['lib/render'],
+            use=['render'],
+            install_path=None,
             **kwargs)
