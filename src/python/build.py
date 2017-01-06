@@ -72,7 +72,6 @@ ffi.cdef(
     """)
 
 # Image API
-# Font API
 ffi.cdef(
     """
     enum {
