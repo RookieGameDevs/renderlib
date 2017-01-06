@@ -8,6 +8,7 @@ ffi.set_source(
     """
     #include "renderlib.h"
     #include <GL/glew.h>
+    #include <matlib.h>
     """,
     include_dirs=[
         '../../build/include/renderlib',
@@ -31,6 +32,43 @@ ffi.cdef(
 # Core API
 ffi.cdef(
     """
+    // matlib definitions
+    struct Mat {
+        ...;
+    };
+    struct Vec {
+        ...;
+    };
+    struct Qtr {
+        ...;
+    };
+
+    struct Light {
+        struct Mat transform;
+        struct Vec direction;
+        struct Vec color;
+        float ambient_intensity;
+        float diffuse_intensity;
+    };
+
+    struct Material {
+        struct Texture *texture;
+        struct Vec color;
+        int receive_light;
+        float specular_intensity;
+        float specular_power;
+    };
+
+    struct MeshRenderProps {
+        struct Vec eye;
+        struct Mat model, view, projection;
+        int cast_shadows;
+        int receive_shadows;
+        struct Light *light;
+        struct AnimationInstance *animation;
+        struct Material *material;
+    };
+
     int
     renderer_init();
 
@@ -39,6 +77,9 @@ ffi.cdef(
 
     void
     renderer_shutdown(void);
+
+    int
+    render_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
     """)
 
 # Mesh API
