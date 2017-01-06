@@ -5,6 +5,9 @@ class Mesh:
     def __init__(self, meshptr):
         self._mesh = meshptr
 
+    def __del__(self):
+        lib.mesh_free(self._mesh)
+
     @classmethod
     def from_file(cls, filename):
         meshptr = lib.mesh_from_file(filename.encode('utf8'))

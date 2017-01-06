@@ -51,6 +51,9 @@ ffi.cdef(
 
     struct Mesh*
     mesh_from_buffer(const void *data, size_t data_size);
+
+    void
+    mesh_free(struct Mesh *mesh);
     """)
 
 if __name__ == '__main__':
