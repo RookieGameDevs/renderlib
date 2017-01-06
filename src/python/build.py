@@ -71,5 +71,33 @@ ffi.cdef(
     font_free(struct Font *font);
     """)
 
+# Image API
+# Font API
+ffi.cdef(
+    """
+    enum {
+        IMAGE_FORMAT_RGBA,
+        IMAGE_FORMAT_RGB,
+        IMAGE_CODEC_PNG,
+        IMAGE_CODEC_JPEG,
+        ...
+    };
+
+    struct Image {
+        unsigned width, height;
+        int format;
+        ...;
+    };
+
+    struct Image*
+    image_from_buffer(const void *data, size_t size, int codec);
+
+    struct Image*
+    image_from_file(const char *filename);
+
+    void
+    image_free(struct Image *image);
+    """)
+
 if __name__ == '__main__':
     ffi.compile(verbose=True)

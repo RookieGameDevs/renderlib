@@ -19,7 +19,7 @@ struct Image {
 };
 
 struct Image*
-image_from_buffer(const char *data, size_t size, int codec);
+image_from_buffer(const void *data, size_t size, int codec);
 
 struct Image*
 image_from_file(const char *filename);
