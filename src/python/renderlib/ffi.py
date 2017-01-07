@@ -167,3 +167,22 @@ ffi.cdef(
     int
     animation_instance_play(struct AnimationInstance *inst, float dt);
     """)
+
+# Text API
+ffi.cdef(
+    """
+    struct Text {
+        unsigned width;
+        unsigned height;
+        ...;
+    };
+
+    struct Text*
+    text_new(struct Font *font);
+
+    int
+    text_set_string(struct Text *text, const char *str);
+
+    void
+    text_free(struct Text *text);
+    """)
