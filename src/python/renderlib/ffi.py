@@ -130,3 +130,17 @@ ffi.cdef(
     void
     image_free(struct Image *image);
     """)
+
+# Texture API
+ffi.cdef(
+    """
+    struct Texture {
+        ...;
+    };
+
+    struct Texture*
+    texture_from_image(struct Image *image, GLenum type);
+
+    void
+    texture_free(struct Texture *tex);
+    """)
