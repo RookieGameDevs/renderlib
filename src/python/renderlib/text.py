@@ -1,11 +1,11 @@
 from _renderlib import lib
 
 class Text:
-    def __init__(self, font):
+    def __init__(self, font, string=''):
         self._ptr = lib.text_new(font._ptr)
         if not self._ptr:
             raise RuntimeError('failed to create text')
-        self._string = ''
+        self.string = string
 
     def __del__(self):
         lib.text_free(self._ptr)

@@ -61,6 +61,12 @@ ffi.cdef(
         struct Material *material;
     };
 
+    struct TextRenderProps {
+        Mat model, view, projection;
+        Vec color;
+        float opacity;
+    };
+
     int
     renderer_init();
 
@@ -72,6 +78,9 @@ ffi.cdef(
 
     int
     render_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
+
+    int
+    render_text(struct Text *text, struct TextRenderProps *props);
     """)
 
 # Mesh API

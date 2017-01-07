@@ -188,6 +188,47 @@ class MeshRenderProps:
         self._props.material = m._material
 
 
+class TextRenderProps:
+    def __init__(self):
+        self._ptr = ffi.new('struct TextRenderProps*')
+        self._model = Mat(matptr=ffi.addressof(self._ptr, 'model'))
+        self._view = Mat(matptr=ffi.addressof(self._ptr, 'view'))
+        self._projection = Mat(matptr=ffi.addressof(self._ptr, 'projection'))
+        self._color = Vec(vecptr=ffi.addressof(self._ptr, 'color'))
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, mat):
+        ffi.memmove(self._model._mat, mat._mat, ffi.sizeof('Mat'))
+
+    @property
+    def view(self):
+        return self._view
+
+    @view.setter
+    def view(self, mat):
+        ffi.memmove(self._view._mat, mat._mat, ffi.sizeof('Mat'))
+
+    @property
+    def projection(self):
+        return self._projection
+
+    @projection.setter
+    def projection(self, mat):
+        ffi.memmove(self._projection._mat, mat._mat, ffi.sizeof('Mat'))
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, c):
+        ffi.memmove(self._color._vec, c._vec, ffi.sizeof('Vec'))
+
+
 def renderer_init():
     """Initializes renderlib library."""
     if not lib.renderer_init():
@@ -209,3 +250,8 @@ def render_mesh(mesh, props):
     """Renders a mesh applying given rendering properties."""
     if not lib.render_mesh(mesh._mesh, props._props):
         raise RuntimeError('mesh rendering failed')
+
+def render_text(text, props):
+    """Renders a text applying given rendering properties."""
+    if not lib.render_text(text._ptr, props._ptr):
+        raise RuntimeError('text rendering failed')

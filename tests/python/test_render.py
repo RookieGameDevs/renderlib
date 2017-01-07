@@ -4,9 +4,14 @@ from renderlib.animation import AnimationInstance
 from renderlib.core import Light
 from renderlib.core import Material
 from renderlib.core import MeshRenderProps
+from renderlib.core import TextRenderProps
 from renderlib.core import render_mesh
+from renderlib.core import render_text
+from renderlib.core import renderer_present
+from renderlib.font import Font
 from renderlib.image import Image
 from renderlib.mesh import Mesh
+from renderlib.text import Text
 from renderlib.texture import Texture
 
 def test_render_mesh(context):
@@ -55,5 +60,22 @@ def test_render_mesh(context):
     props.animation = anim
     props.material = material
 
-    # do an actual rendering
+    # do actual rendering
     render_mesh(mesh, props)
+    renderer_present()
+
+
+def test_render_text(context):
+    # load a font and create a text from it
+    font = Font.from_file('tests/data/courier.ttf', 21)
+    text = Text(font, 'hello world')
+
+    # create and initialize instance of text render properties container
+    props = TextRenderProps()
+    props.model = props.view = props.projection = Mat()
+    props.color = Vec(0.8, 0.8, 1.0, 1.0)
+    props.opacity = 0.8
+
+    # do actual rendering
+    render_text(text, props)
+    renderer_present()
