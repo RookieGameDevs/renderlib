@@ -104,6 +104,88 @@ class Material:
 class MeshRenderProps:
     def __init__(self):
         self._props = ffi.new('struct MeshRenderProps*')
+        self._eye = Vec(vecptr=ffi.addressof(self._props, 'eye'))
+        self._model = Mat(matptr=ffi.addressof(self._props, 'model'))
+        self._view = Mat(matptr=ffi.addressof(self._props, 'view'))
+        self._projection = Mat(matptr=ffi.addressof(self._props, 'projection'))
+        self._light = None
+        self._animation = None
+        self._material = None
+
+    @property
+    def eye(self):
+        return self._eye
+
+    @eye.setter
+    def eye(self, pos):
+        ffi.memmove(self._eye._vec, pos._vec, ffi.sizeof('Vec'))
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, mat):
+        ffi.memmove(self._model._mat, mat._mat, ffi.sizeof('Mat'))
+
+    @property
+    def view(self):
+        return self._view
+
+    @view.setter
+    def view(self, mat):
+        ffi.memmove(self._view._mat, mat._mat, ffi.sizeof('Mat'))
+
+    @property
+    def projection(self):
+        return self._projection
+
+    @projection.setter
+    def projection(self, mat):
+        ffi.memmove(self._projection._mat, mat._mat, ffi.sizeof('Mat'))
+
+    @property
+    def cast_shadows(self):
+        return bool(self._props.cast_shadows)
+
+    @cast_shadows.setter
+    def cast_shadows(self, flag):
+        self._props.cast_shadows = int(bool(flag))
+
+    @property
+    def receive_shadows(self):
+        return bool(self._props.receive_shadows)
+
+    @receive_shadows.setter
+    def receive_shadows(self, flag):
+        self._props.receive_shadows = int(bool(flag))
+
+    @property
+    def light(self):
+        return self._light
+
+    @light.setter
+    def light(self, l):
+        self._light = l
+        self._props.light = l._light
+
+    @property
+    def animation(self):
+        return self._animation
+
+    @animation.setter
+    def animation(self, a):
+        self._animation = a
+        self._props.animation = a._ptr
+
+    @property
+    def material(self):
+        return self._material
+
+    @material.setter
+    def material(self, m):
+        self._material = m
+        self._props.material = m._material
 
 
 def renderer_init():
