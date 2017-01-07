@@ -1,8 +1,13 @@
 """CFFI wrapper entry point."""
 
 from cffi import FFI
+from matlib.ffi import ffi as matlib_ffi
 
 ffi = FFI()
+
+# matlib FFI dependency
+ffi.include(matlib_ffi)
+
 ffi.set_source(
     '_renderlib',
     """
@@ -32,17 +37,6 @@ ffi.cdef(
 # Core API
 ffi.cdef(
     """
-    // matlib definitions
-    struct Mat {
-        ...;
-    };
-    struct Vec {
-        ...;
-    };
-    struct Qtr {
-        ...;
-    };
-
     struct Light {
         struct Mat transform;
         struct Vec direction;
