@@ -7,10 +7,10 @@ from matlib import Vec
 
 class Light:
     def __init__(self):
-        self._light = ffi.new('struct Light*')
-        self._transform = Mat(matptr=ffi.addressof(self._light, 'transform'))
-        self._direction = Vec(vecptr=ffi.addressof(self._light, 'direction'))
-        self._color = Vec(vecptr=ffi.addressof(self._light, 'color'))
+        self._ptr = ffi.new('struct Light*')
+        self._transform = Mat(ptr=ffi.addressof(self._ptr, 'transform'))
+        self._direction = Vec(ptr=ffi.addressof(self._ptr, 'direction'))
+        self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
 
     @property
     def transform(self):
@@ -18,7 +18,7 @@ class Light:
 
     @transform.setter
     def transform(self, t):
-        ffi.memmove(self._transform._mat, t._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._transform._ptr, t._ptr, ffi.sizeof('Mat'))
 
     @property
     def direction(self):
@@ -26,7 +26,7 @@ class Light:
 
     @direction.setter
     def direction(self, d):
-        ffi.memmove(self._direction._vec, d._vec, ffi.sizeof('Vec'))
+        ffi.memmove(self._direction._ptr, d._ptr, ffi.sizeof('Vec'))
 
     @property
     def color(self):
@@ -34,30 +34,30 @@ class Light:
 
     @color.setter
     def color(self, c):
-        ffi.memmove(self._color._vec, c._vec, ffi.sizeof('Vec'))
+        ffi.memmove(self._color._ptr, c._ptr, ffi.sizeof('Vec'))
 
     @property
     def ambient_intensity(self):
-        return self._light.ambient_intensity
+        return self._ptr.ambient_intensity
 
     @ambient_intensity.setter
     def ambient_intensity(self, ai):
-        self._light.ambient_intensity = ai
+        self._ptr.ambient_intensity = ai
 
     @property
     def diffuse_intensity(self):
-        return self._light.diffuse_intensity
+        return self._ptr.diffuse_intensity
 
     @diffuse_intensity.setter
     def diffuse_intensity(self, di):
-        self._light.diffuse_intensity = di
+        self._ptr.diffuse_intensity = di
 
 
 class Material:
     def __init__(self):
-        self._material = ffi.new('struct Material*')
+        self._ptr = ffi.new('struct Material*')
         self._texture = None
-        self._color = Vec(vecptr=ffi.addressof(self._material, 'color'))
+        self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
 
     @property
     def texture(self):
@@ -66,7 +66,7 @@ class Material:
     @texture.setter
     def texture(self, t):
         self._texture = t
-        self._material.texture = t._texture
+        self._ptr.texture = t._ptr
 
     @property
     def color(self):
@@ -74,43 +74,43 @@ class Material:
 
     @color.setter
     def color(self, c):
-        ffi.memmove(self._color._vec, c._vec, ffi.sizeof('Vec'))
+        ffi.memmove(self._color._ptr, c._ptr, ffi.sizeof('Vec'))
 
     @property
     def receive_light(self):
-        return bool(self._material.receive_light)
+        return bool(self._ptr.receive_light)
 
     @receive_light.setter
     def receive_light(self, flag):
-        self._material.receive_light = int(bool(flag))
+        self._ptr.receive_light = int(bool(flag))
 
     @property
     def specular_intensity(self):
-        return self._material.specular_intensity
+        return self._ptr.specular_intensity
 
     @specular_intensity.setter
     def specular_intensity(self, si):
-        self._material.specular_intensity = si
+        self._ptr.specular_intensity = si
 
     @property
     def specular_power(self):
-        return self._material.specular_power
+        return self._ptr.specular_power
 
     @specular_power.setter
     def specular_power(self, sp):
-        self._material.specular_power = sp
+        self._ptr.specular_power = sp
 
 
 class MeshRenderProps:
     def __init__(self):
-        self._props = ffi.new('struct MeshRenderProps*')
-        self._eye = Vec(vecptr=ffi.addressof(self._props, 'eye'))
-        self._model = Mat(matptr=ffi.addressof(self._props, 'model'))
-        self._view = Mat(matptr=ffi.addressof(self._props, 'view'))
-        self._projection = Mat(matptr=ffi.addressof(self._props, 'projection'))
+        self._ptr = ffi.new('struct MeshRenderProps*')
+        self._eye = Vec(ptr=ffi.addressof(self._ptr, 'eye'))
+        self._model = Mat(ptr=ffi.addressof(self._ptr, 'model'))
+        self._view = Mat(ptr=ffi.addressof(self._ptr, 'view'))
+        self._projection = Mat(ptr=ffi.addressof(self._ptr, 'projection'))
         self._light = None
         self._animation = None
-        self._material = None
+        self._ptrerial = None
 
     @property
     def eye(self):
@@ -118,7 +118,7 @@ class MeshRenderProps:
 
     @eye.setter
     def eye(self, pos):
-        ffi.memmove(self._eye._vec, pos._vec, ffi.sizeof('Vec'))
+        ffi.memmove(self._eye._ptr, pos._ptr, ffi.sizeof('Vec'))
 
     @property
     def model(self):
@@ -126,7 +126,7 @@ class MeshRenderProps:
 
     @model.setter
     def model(self, mat):
-        ffi.memmove(self._model._mat, mat._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._model._ptr, mat._ptr, ffi.sizeof('Mat'))
 
     @property
     def view(self):
@@ -134,7 +134,7 @@ class MeshRenderProps:
 
     @view.setter
     def view(self, mat):
-        ffi.memmove(self._view._mat, mat._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._view._ptr, mat._ptr, ffi.sizeof('Mat'))
 
     @property
     def projection(self):
@@ -142,23 +142,23 @@ class MeshRenderProps:
 
     @projection.setter
     def projection(self, mat):
-        ffi.memmove(self._projection._mat, mat._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._projection._ptr, mat._ptr, ffi.sizeof('Mat'))
 
     @property
     def cast_shadows(self):
-        return bool(self._props.cast_shadows)
+        return bool(self._ptr.cast_shadows)
 
     @cast_shadows.setter
     def cast_shadows(self, flag):
-        self._props.cast_shadows = int(bool(flag))
+        self._ptr.cast_shadows = int(bool(flag))
 
     @property
     def receive_shadows(self):
-        return bool(self._props.receive_shadows)
+        return bool(self._ptr.receive_shadows)
 
     @receive_shadows.setter
     def receive_shadows(self, flag):
-        self._props.receive_shadows = int(bool(flag))
+        self._ptr.receive_shadows = int(bool(flag))
 
     @property
     def light(self):
@@ -167,7 +167,7 @@ class MeshRenderProps:
     @light.setter
     def light(self, l):
         self._light = l
-        self._props.light = l._light
+        self._ptr.light = l._ptr
 
     @property
     def animation(self):
@@ -176,7 +176,7 @@ class MeshRenderProps:
     @animation.setter
     def animation(self, a):
         self._animation = a
-        self._props.animation = a._ptr
+        self._ptr.animation = a._ptr
 
     @property
     def material(self):
@@ -185,16 +185,16 @@ class MeshRenderProps:
     @material.setter
     def material(self, m):
         self._material = m
-        self._props.material = m._material
+        self._ptr.material = m._ptr
 
 
 class TextRenderProps:
     def __init__(self):
         self._ptr = ffi.new('struct TextRenderProps*')
-        self._model = Mat(matptr=ffi.addressof(self._ptr, 'model'))
-        self._view = Mat(matptr=ffi.addressof(self._ptr, 'view'))
-        self._projection = Mat(matptr=ffi.addressof(self._ptr, 'projection'))
-        self._color = Vec(vecptr=ffi.addressof(self._ptr, 'color'))
+        self._model = Mat(ptr=ffi.addressof(self._ptr, 'model'))
+        self._view = Mat(ptr=ffi.addressof(self._ptr, 'view'))
+        self._projection = Mat(ptr=ffi.addressof(self._ptr, 'projection'))
+        self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
 
     @property
     def model(self):
@@ -202,7 +202,7 @@ class TextRenderProps:
 
     @model.setter
     def model(self, mat):
-        ffi.memmove(self._model._mat, mat._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._model._ptr, mat._ptr, ffi.sizeof('Mat'))
 
     @property
     def view(self):
@@ -210,7 +210,7 @@ class TextRenderProps:
 
     @view.setter
     def view(self, mat):
-        ffi.memmove(self._view._mat, mat._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._view._ptr, mat._ptr, ffi.sizeof('Mat'))
 
     @property
     def projection(self):
@@ -218,7 +218,7 @@ class TextRenderProps:
 
     @projection.setter
     def projection(self, mat):
-        ffi.memmove(self._projection._mat, mat._mat, ffi.sizeof('Mat'))
+        ffi.memmove(self._projection._ptr, mat._ptr, ffi.sizeof('Mat'))
 
     @property
     def color(self):
@@ -226,7 +226,7 @@ class TextRenderProps:
 
     @color.setter
     def color(self, c):
-        ffi.memmove(self._color._vec, c._vec, ffi.sizeof('Vec'))
+        ffi.memmove(self._color._ptr, c._ptr, ffi.sizeof('Vec'))
 
 
 def renderer_init():
@@ -248,7 +248,7 @@ def renderer_shutdown():
 
 def render_mesh(mesh, props):
     """Renders a mesh applying given rendering properties."""
-    if not lib.render_mesh(mesh._mesh, props._props):
+    if not lib.render_mesh(mesh._ptr, props._ptr):
         raise RuntimeError('mesh rendering failed')
 
 def render_text(text, props):

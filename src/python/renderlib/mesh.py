@@ -4,29 +4,29 @@ from _renderlib import lib
 from renderlib.animation import Animation
 
 class Mesh:
-    def __init__(self, meshptr):
-        self._mesh = meshptr
+    def __init__(self, ptr):
+        self._ptr = ptr
         self._animations = [
-            Animation(animptr=ffi.addressof(self._mesh.animations, i))
-            for i in range(self._mesh.anim_count)
+            Animation(animptr=ffi.addressof(self._ptr.animations, i))
+            for i in range(self._ptr.anim_count)
         ]
 
     def __del__(self):
-        lib.mesh_free(self._mesh)
+        lib.mesh_free(self._ptr)
 
     @classmethod
     def from_file(cls, filename):
-        meshptr = lib.mesh_from_file(filename.encode('utf8'))
-        if not meshptr:
+        ptr = lib.mesh_from_file(filename.encode('utf8'))
+        if not ptr:
             raise RuntimeError('failed to load mesh from file')
-        return Mesh(meshptr)
+        return Mesh(ptr)
 
     @classmethod
     def from_buffer(cls, buf):
-        meshptr = lib.mesh_from_buffer(buf, len(buf))
-        if not meshptr:
+        ptr = lib.mesh_from_buffer(buf, len(buf))
+        if not ptr:
             raise RuntimeError('failed to load mesh from buffer')
-        return Mesh(meshptr)
+        return Mesh(ptr)
 
     @property
     def animations(self):

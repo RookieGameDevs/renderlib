@@ -12,30 +12,30 @@ class Image:
         PNG = lib.IMAGE_CODEC_PNG
         JPEG = lib.IMAGE_CODEC_JPEG
 
-    def __init__(self, imageptr):
-        self._image = imageptr
+    def __init__(self, ptr):
+        self._ptr = ptr
 
     def __del__(self):
-        lib.image_free(self._image)
+        lib.image_free(self._ptr)
 
     @property
     def width(self):
-        return self._image.width
+        return self._ptr.width
 
     @property
     def height(self):
-        return self._image.height
+        return self._ptr.height
 
     @classmethod
     def from_file(cls, filename):
-        imageptr = lib.image_from_file(filename.encode('utf8'))
-        if not imageptr:
+        ptr = lib.image_from_file(filename.encode('utf8'))
+        if not ptr:
             raise RuntimeError('failed to load image from file')
-        return Image(imageptr)
+        return Image(ptr)
 
     @classmethod
     def from_buffer(cls, buf, codec):
-        imageptr = lib.image_from_buffer(buf, len(buf), codec)
-        if not imageptr:
+        ptr = lib.image_from_buffer(buf, len(buf), codec)
+        if not ptr:
             raise RuntimeError('failed to load image from buffer')
-        return Image(imageptr)
+        return Image(ptr)
