@@ -32,11 +32,11 @@ def context(request):
         raise RuntimeError('failed to initialize OpenGL context')
 
     # initialize renderer
-    renderlib.renderer_init()
+    renderlib.core.renderer_init()
 
     # add clean-up finalizer
     def shutdown():
-        renderlib.renderer_shutdown()
+        renderlib.core.renderer_shutdown()
         SDL_GL_DeleteContext(ctx)
         SDL_DestroyWindow(win)
         SDL_Quit()

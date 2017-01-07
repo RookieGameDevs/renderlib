@@ -13,11 +13,9 @@ ffi.set_source(
     """
     #include "renderlib.h"
     #include <GL/glew.h>
-    #include <matlib.h>
     """,
     include_dirs=[
         '../../build/include/renderlib',
-        '../../deps/matlib/build/include'
     ],
     library_dirs=['../../build/lib'],
     libraries=['render'])
