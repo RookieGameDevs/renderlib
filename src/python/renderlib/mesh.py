@@ -1,9 +1,15 @@
 """Mesh wrappers"""
+from _renderlib import ffi
 from _renderlib import lib
+from renderlib.animation import Animation
 
 class Mesh:
     def __init__(self, meshptr):
         self._mesh = meshptr
+        self._animations = [
+            Animation(animptr=ffi.addressof(self._mesh.animations, i))
+            for i in range(self._mesh.anim_count)
+        ]
 
     def __del__(self):
         lib.mesh_free(self._mesh)
@@ -21,3 +27,7 @@ class Mesh:
         if not meshptr:
             raise RuntimeError('failed to load mesh from buffer')
         return Mesh(meshptr)
+
+    @property
+    def animations(self):
+        return self._animations

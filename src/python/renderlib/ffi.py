@@ -77,7 +77,11 @@ ffi.cdef(
 # Mesh API
 ffi.cdef(
     """
-    struct Mesh;
+    struct Mesh {
+        struct Animation *animations;
+        size_t anim_count;
+        ...;
+    };
 
     struct Mesh*
     mesh_from_file(const char *filename);
@@ -143,4 +147,23 @@ ffi.cdef(
 
     void
     texture_free(struct Texture *tex);
+    """)
+
+# Animation API
+ffi.cdef(
+    """
+    struct Animation {
+        ...;
+    };
+
+    struct AnimationInstance;
+
+    struct AnimationInstance*
+    animation_instance_new(struct Animation *anim);
+
+    void
+    animation_instance_free(struct AnimationInstance *inst);
+
+    int
+    animation_instance_play(struct AnimationInstance *inst, float dt);
     """)
