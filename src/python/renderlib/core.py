@@ -56,6 +56,49 @@ class Light:
 class Material:
     def __init__(self):
         self._material = ffi.new('struct Material*')
+        self._texture = None
+        self._color = Vec(vecptr=ffi.addressof(self._material, 'color'))
+
+    @property
+    def texture(self):
+        return self._texture
+
+    @texture.setter
+    def texture(self, t):
+        self._texture = t
+        self._material.texture = t._texture
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, c):
+        ffi.memmove(self._color._vec, c._vec, ffi.sizeof('Vec'))
+
+    @property
+    def receive_light(self):
+        return bool(self._material.receive_light)
+
+    @receive_light.setter
+    def receive_light(self, flag):
+        self._material.receive_light = int(bool(flag))
+
+    @property
+    def specular_intensity(self):
+        return self._material.specular_intensity
+
+    @specular_intensity.setter
+    def specular_intensity(self, si):
+        self._material.specular_intensity = si
+
+    @property
+    def specular_power(self):
+        return self._material.specular_power
+
+    @specular_power.setter
+    def specular_power(self, sp):
+        self._material.specular_power = sp
 
 
 class MeshRenderProps:
