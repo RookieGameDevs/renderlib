@@ -12,6 +12,13 @@ class Light:
         self._direction = Vec(ptr=ffi.addressof(self._ptr, 'direction'))
         self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
 
+        # initialize defaults
+        self.transform.ident()
+        self.direction = Vec(0, -1, 0)
+        self.color = Vec(1, 1, 1)
+        self.ambient_intensity = 0.3
+        self.diffuse_intensity = 0.8
+
     @property
     def transform(self):
         return self._transform
@@ -58,6 +65,11 @@ class Material:
         self._ptr = ffi.new('struct Material*')
         self._texture = None
         self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
+
+        # defaults
+        self.receive_light = False
+        self.specular_power = 4
+        self.specular_intensity = 0.8
 
     @property
     def texture(self):
@@ -110,7 +122,15 @@ class MeshRenderProps:
         self._projection = Mat(ptr=ffi.addressof(self._ptr, 'projection'))
         self._light = None
         self._animation = None
-        self._ptrerial = None
+        self._material = None
+
+        # defaults
+        self.eye = Vec(0, 0, 1)
+        self.model.ident()
+        self.view.ident()
+        self.projection.ident()
+        self.cast_shadows = False
+        self.receive_shadows = True
 
     @property
     def eye(self):
@@ -195,6 +215,12 @@ class TextRenderProps:
         self._view = Mat(ptr=ffi.addressof(self._ptr, 'view'))
         self._projection = Mat(ptr=ffi.addressof(self._ptr, 'projection'))
         self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
+
+        self.model.ident()
+        self.view.ident()
+        self.projection.ident()
+        self.color = Vec(1, 1, 1)
+        self.opacity = 1.0
 
     @property
     def model(self):
