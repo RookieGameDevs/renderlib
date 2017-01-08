@@ -2,6 +2,7 @@
 from _renderlib import ffi
 from _renderlib import lib
 from renderlib.animation import Animation
+from matlib.mat import Mat
 
 class Mesh:
     def __init__(self, vertices=None, indices=None, normals=None, uvs=None,
@@ -45,6 +46,7 @@ class Mesh:
             Animation(animptr=ffi.addressof(self._ptr.animations, i))
             for i in range(self._ptr.anim_count)
         ]
+        self._transform = Mat(ptr=ffi.addressof(self._ptr, 'transform'))
 
     def __del__(self):
         lib.mesh_free(self._ptr)
@@ -66,3 +68,19 @@ class Mesh:
     @property
     def animations(self):
         return self._animations
+
+    @property
+    def transform(self):
+        return self._transform
+
+    @transform.setter
+    def transform(self, t):
+        ffi.memmove(self._transform._ptr, t._ptr, ffi.sizeof('Mat'))
+
+    @property
+    def vertex_count(self):
+        return self._ptr.vertex_count
+
+    @property
+    def index_count(self):
+        return self._ptr.index_count

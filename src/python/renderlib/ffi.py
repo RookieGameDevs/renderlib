@@ -87,6 +87,9 @@ ffi.cdef(
 ffi.cdef(
     """
     struct Mesh {
+        Mat transform;
+        size_t vertex_count;
+        size_t index_count;
         struct Animation *animations;
         size_t anim_count;
         ...;

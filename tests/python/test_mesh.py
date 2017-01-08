@@ -49,4 +49,5 @@ def test_mesh_new(context):
         uvs,
         joint_ids,
         joint_weights)
-    assert mesh
+    assert mesh.vertex_count == 3
+    assert mesh.index_count == 3
