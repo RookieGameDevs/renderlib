@@ -48,6 +48,7 @@ static struct ShaderUniform u_light_direction;
 static struct ShaderUniform u_light_color;
 static struct ShaderUniform u_light_ambient_intensity;
 static struct ShaderUniform u_light_diffuse_intensity;
+static struct ShaderUniform u_material_color;
 static struct ShaderUniform u_material_specular_intensity;
 static struct ShaderUniform u_material_specular_power;
 
@@ -85,6 +86,7 @@ init_mesh_pipeline(void)
 		"light.color",
 		"light.ambient_intensity",
 		"light.diffuse_intensity",
+		"material.color",
 		"material.specular_intensity",
 		"material.specular_power",
 		NULL
@@ -105,6 +107,7 @@ init_mesh_pipeline(void)
 		&u_light_color,
 		&u_light_ambient_intensity,
 		&u_light_diffuse_intensity,
+		&u_material_color,
 		&u_material_specular_intensity,
 		&u_material_specular_power
 	};
@@ -289,6 +292,17 @@ configure_shadow_mapping(
 	return configured;
 }
 
+static int
+configure_shading(struct Material *material)
+{
+	Vec color = material ? material->color : vec(1, 1, 1, 1);
+	return shader_uniform_set(
+		&u_material_color,
+		1,
+		&color
+	);
+}
+
 int
 draw_mesh(
 	struct Mesh *mesh,
@@ -311,6 +325,7 @@ draw_mesh(
 			&ub_animation,
 			skin_transforms_buffer
 		) &&
+		configure_shading(props->material) &&
 		configure_texture_mapping(
 			props->material ? props->material->texture : NULL
 		) &&

@@ -17,6 +17,7 @@ uniform struct Light {
 } light;
 
 uniform struct Material {
+    vec4 color;
 	float specular_intensity;
 	float specular_power;
 } material;
@@ -78,7 +79,7 @@ void apply_shadow(inout vec4 color, sampler2D shadow_map_sampler, vec4 position)
 
 void main()
 {
-	color = vec4(1.0);
+	color = material.color;
 
 	if (enable_texture_mapping) {
 		color = texture(texture_map_sampler, vec2(uv.x, 1 - uv.y));
