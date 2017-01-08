@@ -1,8 +1,8 @@
 """Core API."""
 from _renderlib import ffi
 from _renderlib import lib
-from matlib import Mat
-from matlib import Vec
+from matlib.mat import Mat
+from matlib.vec import Vec
 
 
 class Light:

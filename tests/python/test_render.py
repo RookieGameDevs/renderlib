@@ -1,5 +1,5 @@
-from matlib import Mat
-from matlib import Vec
+from matlib.mat import Mat
+from matlib.vec import Vec
 from renderlib.animation import AnimationInstance
 from renderlib.core import Light
 from renderlib.core import Material
@@ -13,6 +13,7 @@ from renderlib.image import Image
 from renderlib.mesh import Mesh
 from renderlib.text import Text
 from renderlib.texture import Texture
+
 
 def test_render_mesh(context):
     # load the mesh and create an animation instance
