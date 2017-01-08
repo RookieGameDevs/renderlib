@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import os
 
 
 def options(opt):
@@ -112,6 +113,13 @@ def configure(cfg):
             uselib_store='cblas')
 
 
+def stringify_shader(task):
+    with open(task.inputs[0].abspath()) as in_fp:
+        with open(task.outputs[0].abspath(), 'w') as out_fp:
+            out_fp.writelines(
+                '"{}\\n"\n'.format(line[:-1]) for line in in_fp.readlines())
+
+
 def build(bld):
     deps = ['glew', 'libpng', 'libjpeg', 'freetype', 'matlib']
     kwargs = {}
@@ -124,11 +132,20 @@ def build(bld):
     elif sys.platform.startswith('darwin'):
         kwargs['framework'] = ['OpenGL', 'Accelerate']
 
+    # stringify shaders in order to embed them into library at compile time
+    shaders = []
+    for shader_file in bld.path.ant_glob('src/shaders/*'):
+        target = 'shaders/{}.h'.format(os.path.basename(shader_file.name))
+        bld(rule=stringify_shader, source=shader_file, target=target)
+        shaders.append(target)
+
     bld.shlib(
         target='render',
         source=bld.path.ant_glob('src/**/*.c', excl=['src/python']),
         uselib=deps,
         install_path='${PREFIX}/lib',
+        includes=bld.bldnode.find_or_declare('shaders').abspath(),
+        use=shaders,
         **kwargs)
 
     bld.install_files(

@@ -3,7 +3,16 @@
 #include <assert.h>
 #include <stdlib.h>
 
+static const char *vertex_shader = (
+# include "text.vert.h"
+);
+
+static const char *fragment_shader = (
+# include "text.frag.h"
+);
+
 static struct Shader *shader = NULL;
+static struct ShaderSource *shader_sources[2] = { NULL, NULL };
 static struct ShaderUniform u_mvp;
 static struct ShaderUniform u_glyph_map_sampler;
 static struct ShaderUniform u_atlas_map_sampler;
@@ -15,6 +24,8 @@ static void
 cleanup(void)
 {
 	shader_free(shader);
+	shader_source_free(shader_sources[0]);
+	shader_source_free(shader_sources[1]);
 }
 
 int
@@ -42,16 +53,22 @@ init_text_pipeline(void)
 		&u_opacity
 	};
 
-	// compile mesh pipeline shader and initialize uniforms
-	shader = shader_compile(
-		"src/shaders/text.vert",
-		"src/shaders/text.frag",
-		uniform_names,
-		uniforms,
-		NULL,
-		NULL
+	// compile text pipeline shader and initialize uniforms
+	shader_sources[0] = shader_source_from_string(
+		vertex_shader,
+		GL_VERTEX_SHADER
 	);
-	if (!shader) {
+	shader_sources[1] = shader_source_from_string(
+		fragment_shader,
+		GL_FRAGMENT_SHADER
+	);
+	if (!shader_sources[0] ||
+	    !shader_sources[1] ||
+	    !(shader = shader_new(shader_sources, 2))) {
+		errf(ERR_GENERIC, "text pipeline shader compile failed");
+		return 0;
+	} else if (!shader_get_uniforms(shader, uniform_names, uniforms)) {
+		errf(ERR_GENERIC, "bad text pipeline shader");
 		return 0;
 	}
 

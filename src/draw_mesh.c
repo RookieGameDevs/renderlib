@@ -2,6 +2,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
+static const char *vertex_shader = (
+# include "mesh.vert.h"
+);
+
+static const char *fragment_shader = (
+# include "mesh.frag.h"
+);
+
 // defined in draw_common.c
 int
 update_skin_transforms_buffer(
@@ -21,6 +29,8 @@ configure_skinning(
 	GLuint buffer
 );
 
+static struct Shader *shader = NULL;
+static struct ShaderSource *shader_sources[2] = { NULL, NULL };
 static struct ShaderUniform u_model;
 static struct ShaderUniform u_view;
 static struct ShaderUniform u_projection;
@@ -40,7 +50,6 @@ static struct ShaderUniform u_light_ambient_intensity;
 static struct ShaderUniform u_light_diffuse_intensity;
 static struct ShaderUniform u_material_specular_intensity;
 static struct ShaderUniform u_material_specular_power;
-static struct Shader *shader = NULL;
 
 static GLuint skin_transforms_buffer = 0;
 
@@ -48,6 +57,8 @@ static void
 cleanup(void)
 {
 	shader_free(shader);
+	shader_source_free(shader_sources[0]);
+	shader_source_free(shader_sources[1]);
 	glDeleteBuffers(1, &skin_transforms_buffer);
 }
 
@@ -108,15 +119,22 @@ init_mesh_pipeline(void)
 	};
 
 	// compile mesh pipeline shader and initialize uniforms
-	shader = shader_compile(
-		"src/shaders/mesh.vert",
-		"src/shaders/mesh.frag",
-		uniform_names,
-		uniforms,
-		uniform_block_names,
-		uniform_blocks
+	shader_sources[0] = shader_source_from_string(
+		vertex_shader,
+		GL_VERTEX_SHADER
 	);
-	if (!shader) {
+	shader_sources[1] = shader_source_from_string(
+		fragment_shader,
+		GL_FRAGMENT_SHADER
+	);
+	if (!shader_sources[0] ||
+	    !shader_sources[1] ||
+	    !(shader = shader_new(shader_sources, 2))) {
+		errf(ERR_GENERIC, "mesh pipeline shader compile failed");
+		return 0;
+	} else if (!shader_get_uniforms(shader, uniform_names, uniforms) ||
+	           !shader_get_uniform_blocks(shader, uniform_block_names, uniform_blocks)) {
+		errf(ERR_GENERIC, "bad mesh pipeline shader");
 		return 0;
 	}
 

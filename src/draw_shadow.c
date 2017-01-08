@@ -3,6 +3,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
+static const char *vertex_shader = (
+# include "shadow.vert.h"
+);
+
+static const char *fragment_shader = (
+# include "shadow.frag.h"
+);
+
 // defined in draw_common.c
 int
 update_skin_transforms_buffer(
@@ -23,6 +31,7 @@ configure_skinning(
 );
 
 static struct Shader *shader = NULL;
+static struct ShaderSource *shader_sources[2] = { NULL, NULL };
 static struct ShaderUniform u_mvp;
 static struct ShaderUniform u_enable_skinning;
 static struct ShaderUniform u_skin_transforms;
@@ -34,6 +43,8 @@ static void
 cleanup(void)
 {
 	shader_free(shader);
+	shader_source_free(shader_sources[0]);
+	shader_source_free(shader_sources[1]);
 	glDeleteBuffers(1, &skin_transforms_buffer);
 }
 
@@ -63,16 +74,23 @@ init_shadow_pipeline(void)
 		&ub_animation
 	};
 
-	// compile mesh pipeline shader and initialize uniforms
-	shader = shader_compile(
-		"src/shaders/shadow.vert",
-		"src/shaders/shadow.frag",
-		uniform_names,
-		uniforms,
-		uniform_block_names,
-		uniform_blocks
+	// compile shadow pipeline shader and initialize uniforms
+	shader_sources[0] = shader_source_from_string(
+		vertex_shader,
+		GL_VERTEX_SHADER
 	);
-	if (!shader) {
+	shader_sources[1] = shader_source_from_string(
+		fragment_shader,
+		GL_FRAGMENT_SHADER
+	);
+	if (!shader_sources[0] ||
+	    !shader_sources[1] ||
+	    !(shader = shader_new(shader_sources, 2))) {
+		errf(ERR_GENERIC, "shadow pipeline shader compile failed");
+		return 0;
+	} else if (!shader_get_uniforms(shader, uniform_names, uniforms) ||
+	           !shader_get_uniform_blocks(shader, uniform_block_names, uniform_blocks)) {
+		errf(ERR_GENERIC, "bad shadow pipeline shader");
 		return 0;
 	}
 
