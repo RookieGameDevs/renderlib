@@ -19,3 +19,11 @@ class Text:
         self._string = s
         if not lib.text_set_string(self._ptr, s.encode('utf8')):
             raise RuntimeError('failed to set text string')
+
+    @property
+    def width(self):
+        return self._ptr.width
+
+    @property
+    def height(self):
+        return self._ptr.height
