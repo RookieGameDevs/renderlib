@@ -7,6 +7,7 @@ from matlib.mat import Mat
 class Mesh:
     def __init__(self, vertices=None, indices=None, normals=None, uvs=None,
             joint_ids=None, joint_weights=None, ptr=None):
+        self._ptr = None
         if not ptr:
             # check constraints
             if not vertices or not indices:
@@ -49,7 +50,7 @@ class Mesh:
         self._transform = Mat(ptr=ffi.addressof(self._ptr, 'transform'))
 
     def __del__(self):
-        lib.mesh_free(self._ptr)
+        lib.mesh_free(self._ptr or ffi.NULL)
 
     @classmethod
     def from_file(cls, filename):
