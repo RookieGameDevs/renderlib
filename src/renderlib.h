@@ -53,6 +53,21 @@ struct TextRenderProps {
 	float opacity;                // text opacity
 };
 
+
+/**
+ * Quad render properties.
+ */
+struct QuadRenderProps {
+	Mat model, view, projection;  // transforms
+	Vec color;                    // fill color
+	struct Texture *texture;      // texture to apply
+	struct {
+		float left, top;
+		float right, bottom;
+	} borders;                    // texture borders
+	float opacity;                // opacity; 0 = transparent, 1 = opaque
+};
+
 /**
  * Initialize renderer library.
  */
@@ -82,3 +97,9 @@ render_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
  */
 int
 render_text(struct Text *text, struct TextRenderProps *props);
+
+/**
+ * Render a colored/textured quad.
+ */
+int
+render_quad(float w, float h, struct QuadRenderProps *props);

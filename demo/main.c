@@ -48,6 +48,10 @@ static struct Material terrain_material;
 static struct Text *fps_text = NULL;
 static struct Font *font = NULL;
 
+// close button
+static struct Image *close_btn_img = NULL;
+static struct Texture *close_btn_texture = NULL;
+
 static int
 init(unsigned width, unsigned height)
 {
@@ -184,6 +188,12 @@ update(float dt)
 				controls.play_animation = !controls.play_animation;
 				break;
 			}
+		} else if (evt.type == SDL_MOUSEBUTTONDOWN &&
+			   evt.button.x >= WIDTH - 40 &&
+			   evt.button.x <= WIDTH &&
+			   evt.button.y >= 2 &&
+		           evt.button.y <= 40) {
+			return 0;
 		}
 	}
 
@@ -237,10 +247,22 @@ render(void)
 	};
 	mat_translate(&text_props.model, -WIDTH / 2 + 10, HEIGHT / 2 - 10, 0);
 
+	struct QuadRenderProps close_btn_props = {
+		.model = identity,
+		.view = identity,
+		.projection = ui_projection,
+		.color = vec(1, 1, 1, 1),
+		.opacity = 1.0,
+		.texture = close_btn_texture,
+		.borders = { 0, 0, 0, 0 }
+	};
+	mat_translate(&close_btn_props.model, WIDTH / 2 - 40, HEIGHT / 2 - 2, 0);
+
 	int ok = (
 		render_mesh(mesh, &mesh_props) &&
 		render_mesh(terrain_mesh, &terrain_props) &&
 		render_text(fps_text, &text_props) &&
+		render_quad(38, 36, &close_btn_props) &&
 		renderer_present()
 	);
 	SDL_GL_SwapWindow(window);
@@ -258,7 +280,9 @@ load_resources(void)
 	    !(grass_img = image_from_file("tests/data/grass.jpg")) ||
 	    !(terrain_texture = texture_from_image(grass_img, GL_TEXTURE_2D)) ||
 	    !(font = font_from_file("tests/data/courier.ttf", 16)) ||
-	    !(fps_text = text_new(font))) {
+	    !(fps_text = text_new(font)) ||
+	    !(close_btn_img = image_from_file("tests/data/close_btn.png")) ||
+	    !(close_btn_texture = texture_from_image(close_btn_img, GL_TEXTURE_RECTANGLE))) {
 		errf(ERR_GENERIC, "failed to load resources", 0);
 		return 0;
 	}
@@ -276,6 +300,8 @@ load_resources(void)
 static void
 cleanup_resources(void)
 {
+	texture_free(close_btn_texture);
+	image_free(close_btn_img);
 	text_free(fps_text);
 	font_free(font);
 	texture_free(terrain_texture);

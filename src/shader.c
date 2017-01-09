@@ -33,6 +33,9 @@ compute_uniform_size(struct ShaderUniform *uniform)
 		return uniform->count * sizeof(GLfloat) * 3;
 	case GL_FLOAT_VEC2:
 		return uniform->count * sizeof(GLfloat) * 2;
+	case GL_INT_VEC4:
+	case GL_UNSIGNED_INT_VEC4:
+		return uniform->count * sizeof(GLint) * 4;
 	default:
 		err(ERR_SHADER_UNKNOWN_UNIFORM_TYPE);
 	}
@@ -650,6 +653,32 @@ shader_uniform_set(const struct ShaderUniform *uniform, size_t count, ...)
 				memcpy(data[i], v + i, sizeof(GLfloat) * 2);
 			}
 			glUniform2fv(uniform->loc, count, (GLfloat*)data);
+		}
+		break;
+	case GL_INT_VEC4:
+		{
+			GLint data[count][4];
+			Vec *v = va_arg(ap, Vec*);
+			for (size_t i = 0; i < count; i++) {
+				data[i][0] = v->data[0];
+				data[i][1] = v->data[1];
+				data[i][2] = v->data[2];
+				data[i][3] = v->data[3];
+			}
+			glUniform4iv(uniform->loc, count, (GLint*)data);
+		}
+		break;
+	case GL_UNSIGNED_INT_VEC4:
+		{
+			GLuint data[count][4];
+			Vec *v = va_arg(ap, Vec*);
+			for (size_t i = 0; i < count; i++) {
+				data[i][0] = v->data[0];
+				data[i][1] = v->data[1];
+				data[i][2] = v->data[2];
+				data[i][3] = v->data[3];
+			}
+			glUniform4uiv(uniform->loc, count, (GLuint*)data);
 		}
 		break;
 	}

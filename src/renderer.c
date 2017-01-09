@@ -30,6 +30,13 @@ init_text_pipeline(void);
 int
 draw_text(struct Text *text, struct TextRenderProps *props);
 
+// defined in draw_quad.c
+int
+init_quad_pipeline(void);
+
+int
+draw_quad(float w, float h, struct QuadRenderProps *props);
+
 enum {
 	SHADOW_PASS = 1,
 	RENDER_PASS
@@ -46,6 +53,10 @@ struct RenderOp {
 			struct Text *text;
 			struct TextRenderProps props;
 		} text;
+		struct {
+			float w, h;
+			struct QuadRenderProps props;
+		} quad;
 	};
 	int (*exec)(struct RenderOp *op);
 };
@@ -97,6 +108,12 @@ exec_text_op(struct RenderOp *op)
 }
 
 static int
+exec_quad_op(struct RenderOp *op)
+{
+	return draw_quad(op->quad.w, op->quad.h, &op->quad.props);
+}
+
+static int
 render_queue_exec(struct RenderQueue *q)
 {
 	int ok = 1;
@@ -126,7 +143,8 @@ renderer_init(void)
 	// initialize pipelines
 	if (!init_mesh_pipeline() ||
 	    !init_shadow_pipeline() ||
-	    !init_text_pipeline()) {
+	    !init_text_pipeline() ||
+	    !init_quad_pipeline()) {
 		errf(ERR_GENERIC, "pipelines initialization failed");
 		renderer_shutdown();
 		return 0;
@@ -226,6 +244,21 @@ render_text(struct Text *text, struct TextRenderProps *props)
 			.props = *props
 		},
 		.exec = exec_text_op
+	};
+	return render_queue_push(&render_queue, &op);
+}
+
+int
+render_quad(float w, float h, struct QuadRenderProps *props)
+{
+	struct RenderOp op = {
+		.pass = RENDER_PASS,
+		.quad = {
+			.w = w,
+			.h = h,
+			.props = *props
+		},
+		.exec = exec_quad_op
 	};
 	return render_queue_push(&render_queue, &op);
 }
