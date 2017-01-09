@@ -139,12 +139,18 @@ def build(bld):
         bld(rule=stringify_shader, source=shader_file, target=target)
         shaders.append(target)
 
+    rpath = [
+        bld.bldnode.abspath(),
+        bld.path.find_or_declare('deps/matlib/build/lib').abspath(),
+    ]
+
     bld.shlib(
         target='render',
         source=bld.path.ant_glob('src/**/*.c', excl=['src/python']),
         uselib=deps,
         install_path='${PREFIX}/lib',
         includes=bld.bldnode.find_or_declare('shaders').abspath(),
+        rpath=rpath,
         use=shaders,
         **kwargs)
 
@@ -163,16 +169,13 @@ def build(bld):
             'src/texture.h',
         ])
 
-    rpath = bld.bldnode.find_or_declare('lib').abspath()
-    print(rpath)
-
     if bld.env.with_tests:
         bld.program(
             target='test-suite',
             source=bld.path.ant_glob('tests/**/*.c', excl=['tests/python']),
             includes=['src'],
             uselib=deps + ['check', 'sdl'],
-            rpath=[rpath],
+            rpath=rpath,
             use=['render'],
             install_path=None,
             **kwargs)
@@ -183,7 +186,7 @@ def build(bld):
             source=bld.path.ant_glob('demo/**/*.c'),
             includes=['src'],
             uselib=deps + ['sdl'],
-            rpath=[rpath],
+            rpath=rpath,
             use=['render'],
             install_path=None,
             **kwargs)
