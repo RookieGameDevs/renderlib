@@ -67,6 +67,17 @@ ffi.cdef(
         float opacity;
     };
 
+    struct QuadRenderProps {
+        Mat model, view, projection;
+        Vec color;
+        struct Texture *texture;
+        struct {
+            float left, top;
+            float right, bottom;
+        } borders;
+        float opacity;
+    };
+
     int
     renderer_init();
 
@@ -81,6 +92,9 @@ ffi.cdef(
 
     int
     render_text(struct Text *text, struct TextRenderProps *props);
+
+    int
+    render_quad(float w, float h, struct QuadRenderProps *props);
     """)
 
 # Mesh API

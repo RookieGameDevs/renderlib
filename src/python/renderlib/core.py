@@ -255,6 +255,100 @@ class TextRenderProps:
         ffi.memmove(self._color._ptr, c._ptr, ffi.sizeof('Vec'))
 
 
+class QuadRenderProps:
+    class Borders:
+        def __init__(self, container):
+            self._borders = container._ptr.borders
+            self.left = self.right = self.top = self.bottom = 0
+
+        @property
+        def left(self):
+            return self._borders.left
+
+        @left.setter
+        def left(self, value):
+            self._borders.left = value
+
+        @property
+        def top(self):
+            return self._borders.top
+
+        @top.setter
+        def top(self, value):
+            self._borders.top = value
+
+        @property
+        def right(self):
+            return self._borders.right
+
+        @right.setter
+        def right(self, value):
+            self._borders.right = value
+
+        @property
+        def right(self):
+            return self._borders.right
+
+        @right.setter
+        def right(self, value):
+            self._borders.right = value
+
+    def __init__(self):
+        self._ptr = ffi.new('struct QuadRenderProps*')
+        self._model = Mat(ptr=ffi.addressof(self._ptr, 'model'))
+        self._view = Mat(ptr=ffi.addressof(self._ptr, 'view'))
+        self._projection = Mat(ptr=ffi.addressof(self._ptr, 'projection'))
+        self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
+
+        self.borders = QuadRenderProps.Borders(self)
+
+        self.model.ident()
+        self.view.ident()
+        self.projection.ident()
+        self.color = Vec(1, 1, 1)
+        self.opacity = 1.0
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, mat):
+        ffi.memmove(self._model._ptr, mat._ptr, ffi.sizeof('Mat'))
+
+    @property
+    def view(self):
+        return self._view
+
+    @view.setter
+    def view(self, mat):
+        ffi.memmove(self._view._ptr, mat._ptr, ffi.sizeof('Mat'))
+
+    @property
+    def projection(self):
+        return self._projection
+
+    @projection.setter
+    def projection(self, mat):
+        ffi.memmove(self._projection._ptr, mat._ptr, ffi.sizeof('Mat'))
+
+    @property
+    def color(self):
+        return self._color
+
+    @color.setter
+    def color(self, c):
+        ffi.memmove(self._color._ptr, c._ptr, ffi.sizeof('Vec'))
+
+    @property
+    def opacity(self):
+        return self._ptr.opacity
+
+    @opacity.setter
+    def opacity(self, value):
+        self._ptr.opacity = value
+
+
 def renderer_init():
     """Initializes renderlib library."""
     if not lib.renderer_init():
@@ -281,3 +375,8 @@ def render_text(text, props):
     """Renders a text applying given rendering properties."""
     if not lib.render_text(text._ptr, props._ptr):
         raise RuntimeError('text rendering failed')
+
+def render_quad(w, h, props):
+    """Renders a rectangle of given dimensions with given rendering properties."""
+    if not lib.render_quad(w, h, props._ptr):
+        raise RuntimeError('quad rendering failed')

@@ -4,8 +4,10 @@ from renderlib.animation import AnimationInstance
 from renderlib.core import Light
 from renderlib.core import Material
 from renderlib.core import MeshRenderProps
+from renderlib.core import QuadRenderProps
 from renderlib.core import TextRenderProps
 from renderlib.core import render_mesh
+from renderlib.core import render_quad
 from renderlib.core import render_text
 from renderlib.core import renderer_present
 from renderlib.font import Font
@@ -79,4 +81,32 @@ def test_render_text(context):
 
     # do actual rendering
     render_text(text, props)
+    renderer_present()
+
+
+def test_render_colored_quad(context):
+    # initialize simple quad props container
+    props = QuadRenderProps()
+    props.model = props.view = props.projection = Mat()
+    props.color = Vec(0.3, 0.9, 0.3, 1.0)
+    props.opacity = 0.8
+
+    # do actual rendering
+    render_quad(120, 70, props)
+    renderer_present()
+
+
+def test_render_textured_quad(context):
+    # load an image and make a *rectangular* texture from it
+    img = Image.from_file('tests/data/star.png')
+    texture = Texture.from_image(img, Texture.TextureType.texture_rectangle)
+
+    # initialize quad props container
+    props = QuadRenderProps()
+    props.model = props.view = props.projection = Mat()
+    props.texture = texture
+    props.opacity = 0.8
+
+    # do actual rendering
+    render_quad(120, 70, props)
     renderer_present()
