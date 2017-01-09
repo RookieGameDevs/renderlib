@@ -117,7 +117,7 @@ def stringify_shader(task):
     with open(task.inputs[0].abspath()) as in_fp:
         with open(task.outputs[0].abspath(), 'w') as out_fp:
             out_fp.writelines(
-                '"{}\\n"\n'.format(line[:-1]) for line in in_fp.readlines())
+                '"{}\\n"\n'.format(line.replace('\n', '')) for line in in_fp.readlines())
 
 
 def build(bld):
