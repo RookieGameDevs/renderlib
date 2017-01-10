@@ -219,7 +219,7 @@ class TextRenderProps:
         self.model.ident()
         self.view.ident()
         self.projection.ident()
-        self.color = Vec(1, 1, 1)
+        self.color = Vec(1, 1, 1, 1)
         self.opacity = 1.0
 
     @property
@@ -253,6 +253,14 @@ class TextRenderProps:
     @color.setter
     def color(self, c):
         ffi.memmove(self._color._ptr, c._ptr, ffi.sizeof('Vec'))
+
+    @property
+    def opacity(self):
+        return self._ptr.opacity
+
+    @opacity.setter
+    def opacity(self, value):
+        self._ptr.opacity = value
 
 
 class QuadRenderProps:
