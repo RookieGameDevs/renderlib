@@ -100,6 +100,8 @@ draw_text(struct Text *text, struct TextRenderProps *props)
 	glBindTexture(GL_TEXTURE_RECTANGLE, atlas_map);
 
 	if (glGetError() != GL_NO_ERROR) {
+		glBindTexture(GL_TEXTURE_1D, 0);
+		glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 		err(ERR_OPENGL);
 		return 0;
 	}

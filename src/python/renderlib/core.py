@@ -307,13 +307,14 @@ class QuadRenderProps:
         self._view = Mat(ptr=ffi.addressof(self._ptr, 'view'))
         self._projection = Mat(ptr=ffi.addressof(self._ptr, 'projection'))
         self._color = Vec(ptr=ffi.addressof(self._ptr, 'color'))
+        self._texture = None
 
         self.borders = QuadRenderProps.Borders(self)
 
         self.model.ident()
         self.view.ident()
         self.projection.ident()
-        self.color = Vec(1, 1, 1)
+        self.color = Vec(1, 1, 1, 1)
         self.opacity = 1.0
 
     @property
@@ -355,6 +356,15 @@ class QuadRenderProps:
     @opacity.setter
     def opacity(self, value):
         self._ptr.opacity = value
+
+    @property
+    def texture(self):
+        return self._texture
+
+    @texture.setter
+    def texture(self, t):
+        self._texture = t
+        self._ptr.texture = t._ptr
 
 
 def renderer_init():

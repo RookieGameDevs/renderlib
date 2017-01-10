@@ -5,8 +5,10 @@ from renderlib.core import Light
 from renderlib.core import Material
 from renderlib.core import MeshRenderProps
 from renderlib.core import TextRenderProps
+from renderlib.core import QuadRenderProps
 from renderlib.core import render_mesh
 from renderlib.core import render_text
+from renderlib.core import render_quad
 from renderlib.core import renderer_clear
 from renderlib.core import renderer_init
 from renderlib.core import renderer_present
@@ -132,6 +134,10 @@ class Demo:
             self.grass_img, Texture.TextureType.texture_2d)
         self.font = Font.from_file('tests/data/courier.ttf', 16)
         self.fps_text = Text(self.font)
+        self.close_btn_img = Image.from_file('tests/data/close_btn.png')
+        self.close_btn_texture = Texture.from_image(
+            self.close_btn_img,
+            Texture.TextureType.texture_rectangle)
 
         self.material = Material()
         self.material.texture = self.texture
@@ -201,6 +207,12 @@ class Demo:
         text_props.opacity = 1.0
         text_props.model.translate(-self.width / 2 + 10, self.height / 2 - 10, 0)
         render_text(self.fps_text, text_props)
+
+        close_btn_props = QuadRenderProps()
+        close_btn_props.projection = self.ui_projection
+        close_btn_props.texture = self.close_btn_texture
+        close_btn_props.model.translate(self.width / 2 - 40, self.height / 2 - 2, 0)
+        render_quad(self.close_btn_img.width, self.close_btn_img.height, close_btn_props)
 
         renderer_present()
         SDL_GL_SwapWindow(self.win)
