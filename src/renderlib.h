@@ -75,6 +75,12 @@ int
 renderer_init(void);
 
 /**
+ * Clear render buffers.
+ */
+void
+renderer_clear(void);
+
+/**
  * Render current render queue and flush it.
  */
 int

@@ -2,7 +2,6 @@
 # define _POSIX_C_SOURCE 199309L
 #endif
 
-#include <GL/glew.h>
 #include <SDL.h>
 #include <matlib.h>
 #include <renderlib.h>
@@ -208,7 +207,7 @@ update(float dt)
 static int
 render(void)
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	renderer_clear();
 
 	Mat identity;
 	mat_ident(&identity);
