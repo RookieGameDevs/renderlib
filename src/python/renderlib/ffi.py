@@ -100,6 +100,13 @@ ffi.cdef(
     render_quad(float w, float h, struct QuadRenderProps *props);
     """)
 
+# Error API
+ffi.cdef(
+    """
+    void
+    error_print_traceback(void);
+    """)
+
 # Mesh API
 ffi.cdef(
     """
