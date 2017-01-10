@@ -355,6 +355,11 @@ def renderer_init():
         raise RuntimeError('renderer initialization failed')
 
 
+def renderer_clear():
+    """Clear render buffers."""
+    lib.renderer_clear()
+
+
 def renderer_present():
     """Presents rendering results (a frame)."""
     if not lib.renderer_present():
@@ -371,10 +376,12 @@ def render_mesh(mesh, props):
     if not lib.render_mesh(mesh._ptr, props._ptr):
         raise RuntimeError('mesh rendering failed')
 
+
 def render_text(text, props):
     """Renders a text applying given rendering properties."""
     if not lib.render_text(text._ptr, props._ptr):
         raise RuntimeError('text rendering failed')
+
 
 def render_quad(w, h, props):
     """Renders a rectangle of given dimensions with given rendering properties."""

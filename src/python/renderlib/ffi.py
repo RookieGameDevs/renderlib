@@ -79,7 +79,10 @@ ffi.cdef(
     };
 
     int
-    renderer_init();
+    renderer_init(void);
+
+    void
+    renderer_clear(void);
 
     int
     renderer_present(void);
