@@ -40,4 +40,7 @@ void
 error_dump_traceback(FILE *fp);
 
 void
+error_print_traceback(void);
+
+void
 error_clear_traceback(void);

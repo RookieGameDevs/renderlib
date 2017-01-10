@@ -129,6 +129,12 @@ error_dump_traceback(FILE *fp)
 }
 
 void
+error_print_traceback(void)
+{
+	error_dump_traceback(stdout);
+}
+
+void
 error_clear_traceback(void)
 {
 	if (!initialized) {
