@@ -29,6 +29,12 @@ def options(opt):
         action='store',
         help='path to libjpeg installation root')
 
+    opt.add_option(
+        '--matlib-path',
+        default='/usr',
+        action='store',
+        help='path to matlib installation root')
+
 
 def configure(cfg):
     cfg.load('compiler_c')
@@ -64,8 +70,8 @@ def configure(cfg):
         msg=u'Checking for libjpeg',
         lib='jpeg',
         header_file='jpeglib.h',
-        includes=[cfg.options.jpeg_path + '/include'],
-        libpath=[cfg.options.jpeg_path + '/lib'],
+        includes=os.path.join(cfg.options.jpeg_path, 'include'),
+        libpath=os.path.join(cfg.options.jpeg_path, 'lib'),
         uselib_store='libjpeg')
 
     # find freetype2
@@ -79,8 +85,8 @@ def configure(cfg):
         msg=u'Checking for matlib',
         lib='mat',
         header_file='matlib.h',
-        includes=[cfg.path.find_dir('deps/matlib/build/include').abspath()],
-        libpath=[cfg.path.find_dir('deps/matlib/build/lib').abspath()],
+        includes=os.path.join(cfg.options.matlib_path, 'include'),
+        libpath=os.path.join(cfg.options.matlib_path, 'lib'),
         uselib_store='matlib')
 
     if cfg.options.with_tests or cfg.options.with_demo:
@@ -139,18 +145,12 @@ def build(bld):
         bld(rule=stringify_shader, source=shader_file, target=target)
         shaders.append(target)
 
-    rpath = [
-        bld.bldnode.abspath(),
-        bld.path.find_or_declare('deps/matlib/build/lib').abspath(),
-    ]
-
     bld.shlib(
         target='render',
         source=bld.path.ant_glob('src/**/*.c', excl=['src/python']),
         uselib=deps,
         install_path='${PREFIX}/lib',
         includes=bld.bldnode.find_or_declare('shaders').abspath(),
-        rpath=rpath,
         use=shaders,
         **kwargs)
 
@@ -168,6 +168,10 @@ def build(bld):
             'src/shader.h',
             'src/texture.h',
         ])
+
+    rpath = [
+        bld.bldnode.abspath(),
+    ]
 
     if bld.env.with_tests:
         bld.program(
