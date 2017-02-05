@@ -147,7 +147,7 @@ def build(bld):
 
     bld.shlib(
         target='render',
-        source=bld.path.ant_glob('src/**/*.c', excl=['src/python']),
+        source=bld.path.ant_glob('src/**/*.c'),
         uselib=deps,
         install_path='${PREFIX}/lib',
         includes=bld.bldnode.find_or_declare('shaders').abspath(),
@@ -176,7 +176,7 @@ def build(bld):
     if bld.env.with_tests:
         bld.program(
             target='test-suite',
-            source=bld.path.ant_glob('tests/**/*.c', excl=['tests/python']),
+            source=bld.path.ant_glob('tests/**/*.c'),
             includes=['src'],
             uselib=deps + ['check', 'sdl'],
             rpath=rpath,
