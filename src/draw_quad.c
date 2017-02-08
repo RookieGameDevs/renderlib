@@ -15,6 +15,7 @@ static struct Shader *shader = NULL;
 static struct ShaderSource *shader_sources[2] = { NULL, NULL };
 static struct ShaderUniform u_mvp;
 static struct ShaderUniform u_size;
+static struct ShaderUniform u_border;
 static struct ShaderUniform u_color;
 static struct ShaderUniform u_opacity;
 static struct ShaderUniform u_texture_sampler;
@@ -40,6 +41,7 @@ init_quad_pipeline(void)
 	const char *uniform_names[] = {
 		"mvp",
 		"size",
+		"border",
 		"color",
 		"opacity",
 		"texture_sampler",
@@ -49,6 +51,7 @@ init_quad_pipeline(void)
 	struct ShaderUniform *uniforms[] = {
 		&u_mvp,
 		&u_size,
+		&u_border,
 		&u_color,
 		&u_opacity,
 		&u_texture_sampler,
@@ -107,11 +110,18 @@ draw_quad(float w, float h, struct QuadRenderProps *props)
 	}
 
 	Vec size = vec(w, h, 0, 0);
+	Vec borders = vec(
+		props->borders.left,
+		props->borders.right,
+		props->borders.top,
+		props->borders.bottom
+	);
 
 	int configured = (
 		shader_bind(shader) &&
 		shader_uniform_set(&u_mvp, 1, &mvp) &&
 		shader_uniform_set(&u_size, 1, &size) &&
+		shader_uniform_set(&u_border, 1, &borders) &&
 		shader_uniform_set(&u_color, 1, &props->color) &&
 		shader_uniform_set(&u_opacity, 1, &props->opacity) &&
 		shader_uniform_set(&u_enable_texture_mapping, 1, &enable_texture_mapping) &&
