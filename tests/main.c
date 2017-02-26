@@ -14,6 +14,9 @@ Suite*
 render_suite(void);
 
 Suite*
+scene_suite(void);
+
+Suite*
 shader_suite(void);
 
 Suite*
@@ -31,6 +34,7 @@ main(int argc, char *argv[])
 	srunner_add_suite(sr, image_suite());
 	srunner_add_suite(sr, mesh_suite());
 	srunner_add_suite(sr, render_suite());
+	srunner_add_suite(sr, scene_suite());
 	srunner_add_suite(sr, shader_suite());
 	srunner_add_suite(sr, texture_suite());
 
