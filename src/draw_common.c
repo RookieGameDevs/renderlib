@@ -36,11 +36,7 @@ update_skin_transforms_buffer(
 		GL_UNIFORM_BUFFER,
 		offset,
 		size,
-		(
-			GL_MAP_WRITE_BIT |
-			GL_MAP_INVALIDATE_BUFFER_BIT |
-			GL_MAP_UNSYNCHRONIZED_BIT
-		)
+		GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT
 	);
 	if (!dst || glGetError() != GL_NO_ERROR) {
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
