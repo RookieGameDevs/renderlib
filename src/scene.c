@@ -1,22 +1,41 @@
 #include "error.h"
 #include "scene.h"
+#include <datalib.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define SCENE_CAPACITY_INCREMENT 64
+struct Scene {
+	struct HashTable *objects;
+};
 
 enum {
 	OBJECT_TYPE_NULL,
 	OBJECT_TYPE_MESH,
 	OBJECT_TYPE_TEXT,
-	OBJECT_TYPE_QUAD,
+	OBJECT_TYPE_QUAD
 };
 
-struct Scene {
-	struct Object *objects;
-	size_t object_capacity;
-	size_t object_count;
+struct ObjectInfo {
+	int type;
+};
+
+struct MeshInfo {
+	struct ObjectInfo base;
+	struct Mesh *mesh;
+	struct MeshRenderProps *props;
+};
+
+struct TextInfo {
+	struct ObjectInfo base;
+	struct Text *text;
+	struct TextRenderProps *props;
+};
+
+struct QuadInfo {
+	struct ObjectInfo base;
+	struct Quad *quad;
+	struct QuadRenderProps *props;
 };
 
 struct Scene*
@@ -28,111 +47,149 @@ scene_new(void)
 		return NULL;
 	}
 
-	size_t size = sizeof(struct Object) * SCENE_CAPACITY_INCREMENT;
-	scene->objects = malloc(size);
+	scene->objects = hash_table_new(ptr_hash, ptr_cmp, 0);
 	if (!scene->objects) {
 		err(ERR_NO_MEM);
-		scene_free(scene);
+		free(scene);
 		return NULL;
 	}
-	memset(scene->objects, 0, size);
-	scene->object_count = 0;
-	scene->object_capacity = SCENE_CAPACITY_INCREMENT;
 
 	return scene;
 }
 
-/**
- * Allocates a new Object in scene storage.
- */
 static struct Object*
-scene_alloc_object(struct Scene *scene)
+object_new(void)
 {
-	for (size_t i = 0; i < scene->object_capacity; i++) {
-		if (scene->objects[i].type == OBJECT_TYPE_NULL) {
-			scene->object_count++;
-			return &scene->objects[i];
-		}
-	}
-
-	// allocate a bigger array for objects storage
-	size_t cur_size = sizeof(struct Object) * scene->object_capacity;
-	size_t new_size = cur_size + sizeof(struct Object) * SCENE_CAPACITY_INCREMENT;
-	struct Object *objects = malloc(new_size);
-	if (!objects) {
-		err(ERR_NO_MEM);
-		// if the array could not be allocated, at least the current one
-		// is kept
+	struct Object *obj = malloc(sizeof(struct Object));
+	if (!obj) {
 		return NULL;
 	}
-
-	// copy existing array and free it
-	memcpy(objects, scene->objects, cur_size);
-	free(scene->objects);
-
-	// zero the extra space
-	memset(((void*)objects) + cur_size, 0, new_size - cur_size);
-
-	// pick the first entry from extra space as object to return and then
-	// replace the container
-	struct Object *obj = &scene->objects[scene->object_capacity];
-	scene->objects = objects;
-	scene->object_capacity += SCENE_CAPACITY_INCREMENT;
-	scene->object_count++;
-
+	obj->position = vec(0, 0, 0, 0);
+	obj->scale = vec(1, 1, 1, 0);
+	obj->rotation = qtr(1, 0, 0, 0);
 	return obj;
 }
 
 struct Object*
 scene_add_mesh(struct Scene *scene, struct Mesh *mesh)
 {
-	struct Object *obj = scene_alloc_object(scene);
-	obj->type = OBJECT_TYPE_MESH;
-	// TODO
+	struct Object *obj = object_new();
+	if (!obj) {
+		return NULL;
+	}
+
+	struct MeshInfo *info = malloc(sizeof(struct MeshInfo));
+	if (!info) {
+		free(obj);
+		return NULL;
+	}
+
+	info->base.type = OBJECT_TYPE_MESH;
+	info->mesh = mesh;
+	info->props = NULL;  // TODO
+
+	if (!hash_table_set(scene->objects, obj, info)) {
+		free(obj);
+		free(info);
+		return NULL;
+	}
+
 	return obj;
 }
 
 struct Object*
 scene_add_text(struct Scene *scene, struct Text *text)
 {
-	struct Object *obj = scene_alloc_object(scene);
-	obj->type = OBJECT_TYPE_TEXT;
-	// TODO
+	struct Object *obj = object_new();
+	if (!obj) {
+		return NULL;
+	}
+
+	struct TextInfo *info = malloc(sizeof(struct TextInfo));
+	if (!info) {
+		free(obj);
+		return NULL;
+	}
+
+	info->base.type = OBJECT_TYPE_TEXT;
+	info->text = text;
+	info->props = NULL;  // TODO
+
+	if (!hash_table_set(scene->objects, obj, info)) {
+		free(obj);
+		free(info);
+		return NULL;
+	}
+
 	return obj;
 }
 
 struct Object*
 scene_add_quad(struct Scene *scene, struct Quad *quad)
 {
-	struct Object *obj = scene_alloc_object(scene);
-	obj->type = OBJECT_TYPE_QUAD;
-	// TODO
+	struct Object *obj = object_new();
+	if (!obj) {
+		return NULL;
+	}
+
+	struct QuadInfo *info = malloc(sizeof(struct QuadInfo));
+	if (!info) {
+		free(obj);
+		return NULL;
+	}
+
+	info->base.type = OBJECT_TYPE_QUAD;
+	info->quad = quad;
+	info->props = NULL;  // TODO
+
+	if (!hash_table_set(scene->objects, obj, info)) {
+		free(obj);
+		free(info);
+		return NULL;
+	}
+
 	return obj;
 }
 
 void
 scene_remove_object(struct Scene *scene, struct Object *object)
 {
-	for (size_t i = 0; i < scene->object_capacity; i++) {
-		if (&scene->objects[i] == object) {
-			scene->objects[i].type = OBJECT_TYPE_NULL;
-			scene->object_count--;
-			return;
-		}
-	}
+	struct ObjectInfo *info = hash_table_pop(scene->objects, object);
+	free(object);
+	free(info);
 }
 
 size_t
 scene_object_count(struct Scene *scene)
 {
-	return scene->object_count;
+	return hash_table_len(scene->objects);
 }
 
 void
 scene_free(struct Scene *scene)
 {
 	if (scene) {
-		free(scene->objects);
+		void *k, *v;
+		struct HashTableIter iter;
+		hash_table_iter_init(scene->objects, &iter);
+		while (hash_table_iter_next(&iter, (const void**)&k, &v)) {
+			free(k);
+			free(v);
+		}
+		hash_table_free(scene->objects);
 		free(scene);
 	}
+}
+
+int
+scene_render(struct Scene *scene, struct Camera *camera)
+{
+	const struct Object *obj = NULL;
+	struct ObjectInfo *info = NULL;
+	struct HashTableIter iter;
+	hash_table_iter_init(scene->objects, &iter);
+	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
+		// TODO
+	}
+	return 1;
 }

@@ -35,6 +35,12 @@ def options(opt):
         action='store',
         help='path to matlib installation root')
 
+    opt.add_option(
+        '--datalib-path',
+        default='/usr',
+        action='store',
+        help='path to datalib installation root')
+
 
 def configure(cfg):
     cfg.load('compiler_c')
@@ -67,7 +73,7 @@ def configure(cfg):
 
     # find libjpeg
     cfg.check_cc(
-        msg=u'Checking for libjpeg',
+        msg=u'Checking for \'libjpeg\'',
         lib='jpeg',
         header_file='jpeglib.h',
         includes=os.path.join(cfg.options.jpeg_path, 'include'),
@@ -82,12 +88,21 @@ def configure(cfg):
 
     # find matlib
     cfg.check_cc(
-        msg=u'Checking for matlib',
+        msg=u'Checking for \'matlib\'',
         lib='mat',
         header_file='matlib.h',
         includes=os.path.join(cfg.options.matlib_path, 'include'),
         libpath=os.path.join(cfg.options.matlib_path, 'lib'),
         uselib_store='matlib')
+
+    # find datalib
+    cfg.check_cc(
+        msg=u'Checking for \'datalib\'',
+        lib='data',
+        header_file='datalib.h',
+        includes=os.path.join(cfg.options.datalib_path, 'include'),
+        libpath=os.path.join(cfg.options.datalib_path, 'lib'),
+        uselib_store='datalib')
 
     if cfg.options.with_tests or cfg.options.with_demo:
         # find SDL2
@@ -127,7 +142,7 @@ def stringify_shader(task):
 
 
 def build(bld):
-    deps = ['glew', 'libpng', 'libjpeg', 'freetype', 'matlib']
+    deps = ['glew', 'libpng', 'libjpeg', 'freetype', 'matlib', 'datalib']
     kwargs = {}
 
     if sys.platform.startswith('linux'):

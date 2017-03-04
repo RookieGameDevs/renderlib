@@ -1,4 +1,5 @@
 #include "anim.h"
+#include "camera.h"
 #include "error.h"
 #include "font.h"
 #include "image.h"
@@ -31,6 +32,13 @@ struct Material {
 	float specular_power;
 };
 
+/**
+ * Quad.
+ */
+struct Quad {
+	float width;
+	float height;
+};
 
 /**
  * Mesh render properties.

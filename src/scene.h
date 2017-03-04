@@ -5,13 +5,15 @@
 struct Mesh;
 struct Quad;
 struct Text;
+struct Camera;
 
 struct Object {
 	Vec position;
-
-	int type;
-	void *data;
+	Qtr rotation;
+	Vec scale;
 };
+
+struct Scene;
 
 struct Scene*
 scene_new(void);
@@ -30,6 +32,9 @@ scene_remove_object(struct Scene *scene, struct Object *object);
 
 size_t
 scene_object_count(struct Scene *scene);
+
+int
+scene_render(struct Scene *scene, struct Camera *camera);
 
 void
 scene_free(struct Scene *scene);

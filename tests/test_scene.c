@@ -30,6 +30,22 @@ START_TEST(test_create_and_initialize)
 }
 END_TEST
 
+START_TEST(test_render)
+{
+	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh");
+	ck_assert(mesh);
+
+	struct Scene *scene = scene_new();
+	struct Object *obj = scene_add_mesh(scene, mesh);
+	ck_assert(obj);
+
+	scene_render(scene, NULL);
+
+	scene_free(scene);
+	mesh_free(mesh);
+}
+END_TEST
+
 static void
 suite_setup(void)
 {
@@ -50,6 +66,7 @@ scene_suite(void)
 	TCase *tc_core = tcase_create("core");
 	tcase_add_checked_fixture(tc_core, suite_setup, suite_teardown);
 	tcase_add_test(tc_core, test_create_and_initialize);
+	tcase_add_test(tc_core, test_render);
 
 	suite_add_tcase(s, tc_core);
 
