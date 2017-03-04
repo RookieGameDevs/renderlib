@@ -2,10 +2,13 @@
 
 #include <matlib.h>
 
+struct Camera;
 struct Mesh;
 struct Quad;
 struct Text;
-struct Camera;
+struct MeshRenderProps;
+struct TextRenderProps;
+struct QuadRenderProps;
 
 struct Object {
 	Vec position;
@@ -19,13 +22,13 @@ struct Scene*
 scene_new(void);
 
 struct Object*
-scene_add_mesh(struct Scene *scene, struct Mesh *mesh);
+scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshRenderProps *props);
 
 struct Object*
-scene_add_text(struct Scene *scene, struct Text *text);
+scene_add_text(struct Scene *scene, struct Text *text, struct TextRenderProps *props);
 
 struct Object*
-scene_add_quad(struct Scene *scene, struct Quad *quad);
+scene_add_quad(struct Scene *scene, struct Quad *quad, struct QuadRenderProps *props);
 
 void
 scene_remove_object(struct Scene *scene, struct Object *object);

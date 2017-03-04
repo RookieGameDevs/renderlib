@@ -9,13 +9,13 @@ START_TEST(test_create_and_initialize)
 	struct Scene *scene = scene_new();
 	ck_assert(scene);
 
-	struct Object *mesh_obj = scene_add_mesh(scene, NULL);
+	struct Object *mesh_obj = scene_add_mesh(scene, NULL, NULL);
 	ck_assert(mesh_obj);
 
-	struct Object *text_obj = scene_add_text(scene, NULL);
+	struct Object *text_obj = scene_add_text(scene, NULL, NULL);
 	ck_assert(text_obj && text_obj != mesh_obj);
 
-	struct Object *quad_obj = scene_add_quad(scene, NULL);
+	struct Object *quad_obj = scene_add_quad(scene, NULL, NULL);
 	ck_assert(quad_obj && quad_obj != text_obj && quad_obj != mesh_obj);
 
 	ck_assert_int_eq(scene_object_count(scene), 3);
@@ -35,8 +35,15 @@ START_TEST(test_render)
 	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh");
 	ck_assert(mesh);
 
+	struct MeshRenderProps props = {
+		.cast_shadows = 1,
+		.receive_shadows = 1,
+		.animation = NULL,
+		.material = NULL
+	};
+
 	struct Scene *scene = scene_new();
-	struct Object *obj = scene_add_mesh(scene, mesh);
+	struct Object *obj = scene_add_mesh(scene, mesh, &props);
 	ck_assert(obj);
 
 	scene_render(scene, NULL);

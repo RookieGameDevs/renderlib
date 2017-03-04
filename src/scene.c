@@ -71,7 +71,7 @@ object_new(void)
 }
 
 struct Object*
-scene_add_mesh(struct Scene *scene, struct Mesh *mesh)
+scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshRenderProps *props)
 {
 	struct Object *obj = object_new();
 	if (!obj) {
@@ -86,7 +86,7 @@ scene_add_mesh(struct Scene *scene, struct Mesh *mesh)
 
 	info->base.type = OBJECT_TYPE_MESH;
 	info->mesh = mesh;
-	info->props = NULL;  // TODO
+	info->props = props;
 
 	if (!hash_table_set(scene->objects, obj, info)) {
 		free(obj);
@@ -98,7 +98,7 @@ scene_add_mesh(struct Scene *scene, struct Mesh *mesh)
 }
 
 struct Object*
-scene_add_text(struct Scene *scene, struct Text *text)
+scene_add_text(struct Scene *scene, struct Text *text, struct TextRenderProps *props)
 {
 	struct Object *obj = object_new();
 	if (!obj) {
@@ -113,7 +113,7 @@ scene_add_text(struct Scene *scene, struct Text *text)
 
 	info->base.type = OBJECT_TYPE_TEXT;
 	info->text = text;
-	info->props = NULL;  // TODO
+	info->props = props;
 
 	if (!hash_table_set(scene->objects, obj, info)) {
 		free(obj);
@@ -125,7 +125,7 @@ scene_add_text(struct Scene *scene, struct Text *text)
 }
 
 struct Object*
-scene_add_quad(struct Scene *scene, struct Quad *quad)
+scene_add_quad(struct Scene *scene, struct Quad *quad, struct QuadRenderProps *props)
 {
 	struct Object *obj = object_new();
 	if (!obj) {
@@ -140,7 +140,7 @@ scene_add_quad(struct Scene *scene, struct Quad *quad)
 
 	info->base.type = OBJECT_TYPE_QUAD;
 	info->quad = quad;
-	info->props = NULL;  // TODO
+	info->props = props;
 
 	if (!hash_table_set(scene->objects, obj, info)) {
 		free(obj);
