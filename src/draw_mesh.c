@@ -206,7 +206,7 @@ configure_texture_mapping(struct Texture *texture)
 }
 
 static int
-configure_lighting(struct MeshRenderProps *props)
+configure_lighting(struct MeshProps *props)
 {
 	int enable_lighting = (
 		props->light &&
@@ -264,7 +264,7 @@ configure_lighting(struct MeshRenderProps *props)
 
 static int
 configure_shadow_mapping(
-	struct MeshRenderProps *props,
+	struct MeshProps *props,
 	int shadow_map
 ) {
 	int enable_shadow_mapping = (
@@ -306,7 +306,7 @@ configure_shading(struct Material *material)
 int
 draw_mesh(
 	struct Mesh *mesh,
-	struct MeshRenderProps *props,
+	struct MeshProps *props,
 	int shadow_map
 ) {
 	assert(mesh != NULL);

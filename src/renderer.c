@@ -12,7 +12,7 @@ init_mesh_pipeline(void);
 int
 draw_mesh(
 	struct Mesh *mesh,
-	struct MeshRenderProps *props,
+	struct MeshProps *props,
 	int shadow_map
 );
 
@@ -21,21 +21,21 @@ int
 init_shadow_pipeline(void);
 
 int
-draw_mesh_shadow(struct Mesh *mesh, struct MeshRenderProps *props);
+draw_mesh_shadow(struct Mesh *mesh, struct MeshProps *props);
 
 // defined in draw_text.c
 int
 init_text_pipeline(void);
 
 int
-draw_text(struct Text *text, struct TextRenderProps *props);
+draw_text(struct Text *text, struct TextProps *props);
 
 // defined in draw_quad.c
 int
 init_quad_pipeline(void);
 
 int
-draw_quad(float w, float h, struct QuadRenderProps *props);
+draw_quad(float w, float h, struct QuadProps *props);
 
 enum {
 	SHADOW_PASS = 1,
@@ -47,15 +47,15 @@ struct RenderOp {
 	union {
 		struct {
 			struct Mesh *mesh;
-			struct MeshRenderProps props;
+			struct MeshProps props;
 		} mesh;
 		struct {
 			struct Text *text;
-			struct TextRenderProps props;
+			struct TextProps props;
 		} text;
 		struct {
 			float w, h;
-			struct QuadRenderProps props;
+			struct QuadProps props;
 		} quad;
 	};
 	int (*exec)(struct RenderOp *op);
@@ -217,7 +217,7 @@ renderer_shutdown(void)
 }
 
 int
-render_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
+render_mesh(struct Mesh *mesh, struct MeshProps *props) {
 	int ok = 1;
 	struct RenderOp op = {
 		.mesh = {
@@ -241,7 +241,7 @@ render_mesh(struct Mesh *mesh, struct MeshRenderProps *props) {
 }
 
 int
-render_text(struct Text *text, struct TextRenderProps *props)
+render_text(struct Text *text, struct TextProps *props)
 {
 	struct RenderOp op = {
 		.pass = RENDER_PASS,
@@ -255,7 +255,7 @@ render_text(struct Text *text, struct TextRenderProps *props)
 }
 
 int
-render_quad(float w, float h, struct QuadRenderProps *props)
+render_quad(float w, float h, struct QuadProps *props)
 {
 	struct RenderOp op = {
 		.pass = RENDER_PASS,

@@ -6,9 +6,9 @@ struct Camera;
 struct Mesh;
 struct Quad;
 struct Text;
-struct MeshRenderProps;
-struct TextRenderProps;
-struct QuadRenderProps;
+struct MeshProps;
+struct TextProps;
+struct QuadProps;
 
 struct Object {
 	Vec position;
@@ -22,13 +22,13 @@ struct Scene*
 scene_new(void);
 
 struct Object*
-scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshRenderProps *props);
+scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshProps *props);
 
 struct Object*
-scene_add_text(struct Scene *scene, struct Text *text, struct TextRenderProps *props);
+scene_add_text(struct Scene *scene, struct Text *text, struct TextProps *props);
 
 struct Object*
-scene_add_quad(struct Scene *scene, struct Quad *quad, struct QuadRenderProps *props);
+scene_add_quad(struct Scene *scene, struct Quad *quad, struct QuadProps *props);
 
 void
 scene_remove_object(struct Scene *scene, struct Object *object);

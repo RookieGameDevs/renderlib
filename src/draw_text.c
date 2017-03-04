@@ -82,7 +82,7 @@ init_text_pipeline(void)
 }
 
 int
-draw_text(struct Text *text, struct TextRenderProps *props)
+draw_text(struct Text *text, struct TextProps *props)
 {
 	assert(text != NULL);
 	assert(props != NULL);

@@ -43,7 +43,7 @@ struct Quad {
 /**
  * Mesh render properties.
  */
-struct MeshRenderProps {
+struct MeshProps {
 	Vec eye;                             // viewer position
 	Mat model, view, projection;         // transforms
 	int cast_shadows;                    // should cast shadows
@@ -56,7 +56,7 @@ struct MeshRenderProps {
 /**
  * Text render properties.
  */
-struct TextRenderProps {
+struct TextProps {
 	Mat model, view, projection;  // transforms
 	Vec color;                    // text color
 	float opacity;                // text opacity
@@ -66,7 +66,7 @@ struct TextRenderProps {
 /**
  * Quad render properties.
  */
-struct QuadRenderProps {
+struct QuadProps {
 	Mat model, view, projection;  // transforms
 	Vec color;                    // fill color
 	struct Texture *texture;      // texture to apply
@@ -105,16 +105,16 @@ renderer_shutdown(void);
  * Render a mesh.
  */
 int
-render_mesh(struct Mesh *mesh, struct MeshRenderProps *props);
+render_mesh(struct Mesh *mesh, struct MeshProps *props);
 
 /**
  * Render text.
  */
 int
-render_text(struct Text *text, struct TextRenderProps *props);
+render_text(struct Text *text, struct TextProps *props);
 
 /**
  * Render a colored/textured quad.
  */
 int
-render_quad(float w, float h, struct QuadRenderProps *props);
+render_quad(float w, float h, struct QuadProps *props);

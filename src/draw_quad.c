@@ -90,7 +90,7 @@ init_quad_pipeline(void)
 }
 
 int
-draw_quad(float w, float h, struct QuadRenderProps *props)
+draw_quad(float w, float h, struct QuadProps *props)
 {
 	assert(props != NULL);
 

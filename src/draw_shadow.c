@@ -131,7 +131,7 @@ init_shadow_pipeline(void)
 }
 
 int
-draw_mesh_shadow(struct Mesh *mesh, struct MeshRenderProps *props)
+draw_mesh_shadow(struct Mesh *mesh, struct MeshProps *props)
 {
 	assert(mesh != NULL);
 	assert(props != NULL);

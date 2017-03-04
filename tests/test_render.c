@@ -9,7 +9,7 @@ START_TEST(test_render_mesh_simple)
 {
 	Mat identity;
 	mat_ident(&identity);
-	struct MeshRenderProps props = {
+	struct MeshProps props = {
 		.eye = vec(0, 0, 0, 0),
 		.view = identity,
 		.model = identity,
@@ -39,7 +39,7 @@ START_TEST(test_render_mesh_textured)
 
 	Mat identity;
 	mat_ident(&identity);
-	struct MeshRenderProps props = {
+	struct MeshProps props = {
 		.eye = vec(0, 0, 0, 0),
 		.view = identity,
 		.model = identity,
@@ -62,7 +62,7 @@ START_TEST(test_render_mesh_shadowed)
 	struct Light light = {
 		.transform = identity
 	};
-	struct MeshRenderProps props = {
+	struct MeshProps props = {
 		.eye = vec(0, 0, 0, 0),
 		.view = identity,
 		.model = identity,
@@ -88,7 +88,7 @@ START_TEST(test_render_mesh_animated)
 
 	Mat identity;
 	mat_ident(&identity);
-	struct MeshRenderProps props = {
+	struct MeshProps props = {
 		.eye = vec(0, 0, 0, 0),
 		.view = identity,
 		.model = identity,

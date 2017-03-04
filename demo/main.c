@@ -212,7 +212,7 @@ render(void)
 	Mat identity;
 	mat_ident(&identity);
 
-	struct MeshRenderProps mesh_props = {
+	struct MeshProps mesh_props = {
 		.eye = camera.eye,
 		.model = mesh->transform,
 		.view = camera.view,
@@ -224,7 +224,7 @@ render(void)
 		.material = &material
 	};
 
-	struct MeshRenderProps terrain_props = {
+	struct MeshProps terrain_props = {
 		.eye = camera.eye,
 		.model = terrain_mesh->transform,
 		.view = camera.view,
@@ -237,7 +237,7 @@ render(void)
 	};
 	mat_scale(&terrain_props.model, 2, 2, 1);
 
-	struct TextRenderProps text_props = {
+	struct TextProps text_props = {
 		.model = identity,
 		.view = identity,
 		.projection = ui_projection,
@@ -246,7 +246,7 @@ render(void)
 	};
 	mat_translate(&text_props.model, -WIDTH / 2 + 10, HEIGHT / 2 - 10, 0);
 
-	struct QuadRenderProps close_btn_props = {
+	struct QuadProps close_btn_props = {
 		.model = identity,
 		.view = identity,
 		.projection = ui_projection,

@@ -35,7 +35,7 @@ START_TEST(test_render)
 	struct Mesh *mesh = mesh_from_file("tests/data/zombie.mesh");
 	ck_assert(mesh);
 
-	struct MeshRenderProps props = {
+	struct MeshProps props = {
 		.cast_shadows = 1,
 		.receive_shadows = 1,
 		.animation = NULL,

@@ -23,19 +23,19 @@ struct ObjectInfo {
 struct MeshInfo {
 	struct ObjectInfo base;
 	struct Mesh *mesh;
-	struct MeshRenderProps *props;
+	struct MeshProps *props;
 };
 
 struct TextInfo {
 	struct ObjectInfo base;
 	struct Text *text;
-	struct TextRenderProps *props;
+	struct TextProps *props;
 };
 
 struct QuadInfo {
 	struct ObjectInfo base;
 	struct Quad *quad;
-	struct QuadRenderProps *props;
+	struct QuadProps *props;
 };
 
 struct Scene*
@@ -71,7 +71,7 @@ object_new(void)
 }
 
 struct Object*
-scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshRenderProps *props)
+scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshProps *props)
 {
 	struct Object *obj = object_new();
 	if (!obj) {
@@ -98,7 +98,7 @@ scene_add_mesh(struct Scene *scene, struct Mesh *mesh, struct MeshRenderProps *p
 }
 
 struct Object*
-scene_add_text(struct Scene *scene, struct Text *text, struct TextRenderProps *props)
+scene_add_text(struct Scene *scene, struct Text *text, struct TextProps *props)
 {
 	struct Object *obj = object_new();
 	if (!obj) {
@@ -125,7 +125,7 @@ scene_add_text(struct Scene *scene, struct Text *text, struct TextRenderProps *p
 }
 
 struct Object*
-scene_add_quad(struct Scene *scene, struct Quad *quad, struct QuadRenderProps *props)
+scene_add_quad(struct Scene *scene, struct Quad *quad, struct QuadProps *props)
 {
 	struct Object *obj = object_new();
 	if (!obj) {
