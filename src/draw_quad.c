@@ -90,13 +90,15 @@ init_quad_pipeline(void)
 }
 
 int
-draw_quad(float w, float h, struct QuadProps *props)
+draw_quad(struct Quad *quad, struct QuadProps *props, struct Transform *transform)
 {
+	assert(quad != NULL);
 	assert(props != NULL);
+	assert(transform != NULL);
 
 	Mat mv, mvp;
-	mat_mul(&props->view, &props->model, &mv);
-	mat_mul(&props->projection, &mv, &mvp);
+	mat_mul(&transform->view, &transform->model, &mv);
+	mat_mul(&transform->projection, &mv, &mvp);
 
 	int enable_texture_mapping = props->texture != NULL;
 	int texture_sampler = 0;
@@ -109,7 +111,7 @@ draw_quad(float w, float h, struct QuadProps *props)
 		}
 	}
 
-	Vec size = vec(w, h, 0, 0);
+	Vec size = vec(quad->width, quad->height, 0, 0);
 	Vec borders = vec(
 		props->borders.left,
 		props->borders.right,

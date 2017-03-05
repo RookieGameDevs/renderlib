@@ -16,40 +16,43 @@
 static SDL_Window *window = NULL;
 static SDL_GLContext *context = NULL;
 
-static Mat ui_projection;
-
-static struct {
-	Vec eye;
-	Mat view;
-	Mat projection;
-} camera;
-
-static struct Light light;
-
 static struct {
 	int play_animation;
 } controls;
 
+static struct Camera camera;
+static struct Camera ui_camera;
+static struct Light light;
+
 // main model
-static struct Mesh *mesh = NULL;
-static struct AnimationInstance *animation = NULL;
-static struct Image *image = NULL;
-static struct Texture *texture = NULL;
-static struct Material material;
+static struct Mesh *model_mesh = NULL;
+static struct AnimationInstance *model_animation = NULL;
+static struct Image *model_image = NULL;
+static struct Texture *model_texture = NULL;
+static struct Material model_material;
+static struct MeshProps model_props;
+static struct Transform model_transform;
 
 // terrain model
 static struct Mesh *terrain_mesh = NULL;
-static struct Image *grass_img = NULL;
+static struct Image *terrain_image = NULL;
 static struct Texture *terrain_texture = NULL;
 static struct Material terrain_material;
+static struct MeshProps terrain_props;
+static struct Transform terrain_transform;
 
 // fps counter
 static struct Text *fps_text = NULL;
-static struct Font *font = NULL;
+static struct Font *fps_font = NULL;
+static struct TextProps fps_props;
+static struct Transform fps_transform;
 
 // close button
-static struct Image *close_btn_img = NULL;
-static struct Texture *close_btn_texture = NULL;
+static struct Quad btn_quad = { .width = 38, .height = 36 };
+static struct Image *btn_image = NULL;
+static struct Texture *btn_texture = NULL;
+static struct QuadProps btn_props;
+static struct Transform btn_transform;
 
 static int
 init(unsigned width, unsigned height)
@@ -89,12 +92,17 @@ init(unsigned width, unsigned height)
 	// disable vsync
 	SDL_GL_SetSwapInterval(0);
 
+	// initialize controls
+	controls.play_animation = 0;
+
 	float aspect = WIDTH / (float)HEIGHT;
 
-	// initialize 2D projection matrix
-	mat_ident(&ui_projection);
+	// initialize 2D orthographic camera for UI
+	memset(&ui_camera, 0, sizeof(struct Camera));
+	mat_ident(&ui_camera.projection);
+	mat_ident(&ui_camera.view);
 	mat_ortho(
-		&ui_projection,
+		&ui_camera.projection,
 		-WIDTH / 2,
 		+WIDTH / 2,
 		+HEIGHT / 2,
@@ -104,8 +112,9 @@ init(unsigned width, unsigned height)
 	);
 
 	// initialize camera
-	camera.eye = vec(5, 5, 5, 0);
+	memset(&camera, 0, sizeof(struct Camera));
 	mat_ident(&camera.projection);
+	mat_ident(&camera.view);
 	mat_persp(
 		&camera.projection,
 		30.0f,
@@ -119,6 +128,7 @@ init(unsigned width, unsigned height)
 		0, 0, 0, // target
 		0, 1, 0  // up
 	);
+	camera.position = vec(5, 5, 5, 0);
 
 	// initialize light
 	light.direction = vec(0, -5, -5, 0);
@@ -142,10 +152,7 @@ init(unsigned width, unsigned height)
 		0.0, 0.0, 0.0, // target
 		0.0, 1.0, 0.0  // up
 	);
-	mat_mul(&proj, &view, &light.transform);
-
-	// initialize controls
-	controls.play_animation = 0;
+	mat_mul(&proj, &view, &light.projection);
 
 	return renderer_init();
 }
@@ -175,6 +182,7 @@ shutdown(void)
 static int
 update(float dt)
 {
+	// handle events
 	SDL_Event evt;
 	while (SDL_PollEvent(&evt)) {
 		if (evt.type == SDL_QUIT) {
@@ -198,8 +206,28 @@ update(float dt)
 
 	// play animation
 	if (controls.play_animation) {
-		animation_instance_play(animation, dt);
+		animation_instance_play(model_animation, dt);
 	}
+
+	// update transforms
+	model_transform.model = model_mesh->transform;
+	model_transform.view = camera.view;
+	model_transform.projection = camera.projection;
+
+	terrain_transform.model = terrain_mesh->transform;
+	mat_scale(&terrain_transform.model, 2, 2, 2);
+	terrain_transform.view = camera.view;
+	terrain_transform.projection = camera.projection;
+
+	mat_ident(&fps_transform.model);
+	mat_translate(&fps_transform.model, -WIDTH / 2 + 10, HEIGHT / 2 - 10, 0);
+	fps_transform.view = ui_camera.view;
+	fps_transform.projection = ui_camera.projection;
+
+	mat_ident(&btn_transform.model);
+	mat_translate(&btn_transform.model, WIDTH / 2 - 40, HEIGHT / 2 - 2, 0);
+	btn_transform.view = ui_camera.view;
+	btn_transform.projection = ui_camera.projection;
 
 	return 1;
 }
@@ -209,89 +237,82 @@ render(void)
 {
 	renderer_clear();
 
-	Mat identity;
-	mat_ident(&identity);
-
-	struct MeshProps mesh_props = {
-		.eye = camera.eye,
-		.model = mesh->transform,
-		.view = camera.view,
-		.projection = camera.projection,
-		.cast_shadows = 1,
-		.receive_shadows = 1,
-		.light = &light,
-		.animation = animation,
-		.material = &material
-	};
-
-	struct MeshProps terrain_props = {
-		.eye = camera.eye,
-		.model = terrain_mesh->transform,
-		.view = camera.view,
-		.projection = camera.projection,
-		.cast_shadows = 0,
-		.receive_shadows = 1,
-		.light = &light,
-		.animation = NULL,
-		.material = &terrain_material
-	};
-	mat_scale(&terrain_props.model, 2, 2, 1);
-
-	struct TextProps text_props = {
-		.model = identity,
-		.view = identity,
-		.projection = ui_projection,
-		.color = vec(0.5, 1.0, 0.5, 1.0),
-		.opacity = 1.0
-	};
-	mat_translate(&text_props.model, -WIDTH / 2 + 10, HEIGHT / 2 - 10, 0);
-
-	struct QuadProps close_btn_props = {
-		.model = identity,
-		.view = identity,
-		.projection = ui_projection,
-		.color = vec(1, 1, 1, 1),
-		.opacity = 1.0,
-		.texture = close_btn_texture,
-		.borders = { 0, 0, 0, 0 }
-	};
-	mat_translate(&close_btn_props.model, WIDTH / 2 - 40, HEIGHT / 2 - 2, 0);
-
 	int ok = (
-		render_mesh(mesh, &mesh_props) &&
-		render_mesh(terrain_mesh, &terrain_props) &&
-		render_text(fps_text, &text_props) &&
-		render_quad(38, 36, &close_btn_props) &&
+		render_mesh(
+			model_mesh,
+			&model_props,
+			&model_transform,
+			&light,
+			&camera.position
+		) &&
+		render_mesh(
+			terrain_mesh,
+			&terrain_props,
+			&terrain_transform,
+			&light,
+			&camera.position
+		) &&
+		render_text(fps_text, &fps_props, &fps_transform) &&
+		render_quad(&btn_quad, &btn_props, &btn_transform) &&
 		renderer_present()
 	);
+
 	SDL_GL_SwapWindow(window);
+
 	return ok;
 }
 
 static int
 load_resources(void)
 {
-	if (!(mesh = mesh_from_file("tests/data/zombie.mesh")) ||
-	    !(animation = animation_instance_new(&mesh->animations[0])) ||
-	    !(image = image_from_file("tests/data/zombie.jpg")) ||
-	    !(texture = texture_from_image(image, GL_TEXTURE_2D)) ||
+	if (!(model_mesh = mesh_from_file("tests/data/zombie.mesh")) ||
+	    !(model_animation = animation_instance_new(&model_mesh->animations[0])) ||
+	    !(model_image = image_from_file("tests/data/zombie.jpg")) ||
+	    !(model_texture = texture_from_image(model_image, GL_TEXTURE_2D)) ||
 	    !(terrain_mesh = mesh_from_file("tests/data/plane.mesh")) ||
-	    !(grass_img = image_from_file("tests/data/grass.jpg")) ||
-	    !(terrain_texture = texture_from_image(grass_img, GL_TEXTURE_2D)) ||
-	    !(font = font_from_file("tests/data/courier.ttf", 16)) ||
-	    !(fps_text = text_new(font)) ||
-	    !(close_btn_img = image_from_file("tests/data/close_btn.png")) ||
-	    !(close_btn_texture = texture_from_image(close_btn_img, GL_TEXTURE_RECTANGLE))) {
+	    !(terrain_image = image_from_file("tests/data/grass.jpg")) ||
+	    !(terrain_texture = texture_from_image(terrain_image, GL_TEXTURE_2D)) ||
+	    !(fps_font = font_from_file("tests/data/courier.ttf", 16)) ||
+	    !(fps_text = text_new(fps_font)) ||
+	    !(btn_image = image_from_file("tests/data/close_btn.png")) ||
+	    !(btn_texture = texture_from_image(btn_image, GL_TEXTURE_RECTANGLE))) {
 		errf(ERR_GENERIC, "failed to load resources", 0);
 		return 0;
 	}
 
-	material.texture = texture;
-	material.receive_light = 1;
-	material.specular_intensity = 0.3;
-	material.specular_power = 4;
+	// model material
+	model_material.texture = model_texture;
+	model_material.receive_light = 1;
+	model_material.specular_intensity = 0.3;
+	model_material.specular_power = 4;
+
+	// model mesh props
+	memset(&model_props, 0, sizeof(struct MeshProps));
+	model_props.cast_shadows = 1;
+	model_props.receive_shadows = 1;
+	model_props.animation = model_animation;
+	model_props.material = &model_material;
+
+	// terrain material
 	terrain_material.texture = terrain_texture;
 	terrain_material.receive_light = 1;
+
+	// terrain mesh props
+	memset(&terrain_props, 0, sizeof(struct MeshProps));
+	terrain_props.cast_shadows = 0;
+	terrain_props.receive_shadows = 1;
+	terrain_props.material = &terrain_material;
+
+	// FPS counter text props
+	memset(&fps_props, 0, sizeof(struct TextProps));
+	fps_props.color = vec(0.5, 1.0, 0.5, 1.0);
+	fps_props.opacity = 1.0;
+
+	// close button quad props
+	memset(&btn_props, 0, sizeof(struct QuadProps));
+	btn_props.color = vec(1, 1, 1, 1);
+	btn_props.opacity = 1.0;
+	btn_props.texture = btn_texture;
 
 	return 1;
 }
@@ -299,17 +320,17 @@ load_resources(void)
 static void
 cleanup_resources(void)
 {
-	texture_free(close_btn_texture);
-	image_free(close_btn_img);
+	texture_free(btn_texture);
+	image_free(btn_image);
 	text_free(fps_text);
-	font_free(font);
+	font_free(fps_font);
 	texture_free(terrain_texture);
-	image_free(grass_img);
+	image_free(terrain_image);
 	mesh_free(terrain_mesh);
-	texture_free(texture);
-	image_free(image);
-	animation_instance_free(animation);
-	mesh_free(mesh);
+	texture_free(model_texture);
+	image_free(model_image);
+	animation_instance_free(model_animation);
+	mesh_free(model_mesh);
 }
 
 static void

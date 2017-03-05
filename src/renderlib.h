@@ -1,5 +1,4 @@
 #include "anim.h"
-#include "camera.h"
 #include "error.h"
 #include "font.h"
 #include "image.h"
@@ -11,10 +10,19 @@
 #include <matlib.h>
 
 /**
+ * Camera.
+ */
+struct Camera {
+	Vec position;
+	Mat view;
+	Mat projection;
+};
+
+/**
  * Light.
  */
 struct Light {
-	Mat transform;
+	Mat projection;
 	Vec direction;
 	Vec color;
 	float ambient_intensity;
@@ -41,14 +49,20 @@ struct Quad {
 };
 
 /**
+ * Object transform.
+ */
+struct Transform {
+	Mat model;
+	Mat view;
+	Mat projection;
+};
+
+/**
  * Mesh render properties.
  */
 struct MeshProps {
-	Vec eye;                             // viewer position
-	Mat model, view, projection;         // transforms
 	int cast_shadows;                    // should cast shadows
 	int receive_shadows;                 // should receive shadows
-	struct Light *light;                 // light to use
 	struct AnimationInstance *animation; // animation instance
 	struct Material *material;           // material to apply
 };
@@ -57,17 +71,14 @@ struct MeshProps {
  * Text render properties.
  */
 struct TextProps {
-	Mat model, view, projection;  // transforms
 	Vec color;                    // text color
 	float opacity;                // text opacity
 };
-
 
 /**
  * Quad render properties.
  */
 struct QuadProps {
-	Mat model, view, projection;  // transforms
 	Vec color;                    // fill color
 	struct Texture *texture;      // texture to apply
 	struct {
@@ -105,16 +116,22 @@ renderer_shutdown(void);
  * Render a mesh.
  */
 int
-render_mesh(struct Mesh *mesh, struct MeshProps *props);
+render_mesh(
+	struct Mesh *mesh,
+	struct MeshProps *props,
+	struct Transform *t,
+	struct Light *light,
+	Vec *eye
+);
 
 /**
  * Render text.
  */
 int
-render_text(struct Text *text, struct TextProps *props);
+render_text(struct Text *text, struct TextProps *props, struct Transform *t);
 
 /**
  * Render a colored/textured quad.
  */
 int
-render_quad(float w, float h, struct QuadProps *props);
+render_quad(struct Quad *quad, struct QuadProps *props, struct Transform *t);

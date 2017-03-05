@@ -131,14 +131,19 @@ init_shadow_pipeline(void)
 }
 
 int
-draw_mesh_shadow(struct Mesh *mesh, struct MeshProps *props)
-{
+draw_mesh_shadow(
+	struct Mesh *mesh,
+	struct MeshProps *props,
+	struct Transform *transform,
+	struct Light *light
+) {
 	assert(mesh != NULL);
 	assert(props != NULL);
+	assert(light != NULL);
 
 	// compute final model-view-projection transform in light-space
 	Mat mvp;
-	mat_mul(&props->light->transform, &props->model, &mvp);
+	mat_mul(&light->projection, &transform->model, &mvp);
 
 	int configured = (
 		shader_bind(shader) &&

@@ -178,16 +178,16 @@ init_mesh_pipeline(void)
 }
 
 static int
-configure_texture_mapping(struct Texture *texture)
+configure_texture_mapping(struct MeshProps *props)
 {
-	int enable_texture_mapping = texture != NULL;
+	int enable_texture_mapping = props->material && props->material->texture;
 	int ok = shader_uniform_set(
 		&u_enable_texture_mapping,
 		1,
 		&enable_texture_mapping
 	);
-
 	if (enable_texture_mapping) {
+		struct Texture *texture = props->material->texture;
 		GLint tex_unit = 0;
 		ok &= shader_uniform_set(
 			&u_texture_map_sampler,
@@ -201,15 +201,15 @@ configure_texture_mapping(struct Texture *texture)
 			return 0;
 		}
 	}
-
 	return ok;
 }
 
 static int
-configure_lighting(struct MeshProps *props)
+configure_lighting(struct MeshProps *props, struct Light *light, Vec *eye)
 {
 	int enable_lighting = (
-		props->light &&
+		light &&
+		eye &&
 		props->material &&
 		props->material->receive_light
 	);
@@ -224,7 +224,7 @@ configure_lighting(struct MeshProps *props)
 			shader_uniform_set(
 				&u_eye,
 				1,
-				&props->eye
+				eye
 			) &&
 			shader_uniform_set(
 				&u_material_specular_intensity,
@@ -239,22 +239,22 @@ configure_lighting(struct MeshProps *props)
 			shader_uniform_set(
 				&u_light_direction,
 				1,
-				&props->light->direction
+				&light->direction
 			) &&
 			shader_uniform_set(
 				&u_light_color,
 				1,
-				&props->light->color
+				&light->color
 			) &&
 			shader_uniform_set(
 				&u_light_ambient_intensity,
 				1,
-				&props->light->ambient_intensity
+				&light->ambient_intensity
 			) &&
 			shader_uniform_set(
 				&u_light_diffuse_intensity,
 				1,
-				&props->light->diffuse_intensity
+				&light->diffuse_intensity
 			)
 		);
 	}
@@ -265,11 +265,12 @@ configure_lighting(struct MeshProps *props)
 static int
 configure_shadow_mapping(
 	struct MeshProps *props,
+	struct Light *light,
 	int shadow_map
 ) {
 	int enable_shadow_mapping = (
 		props->receive_shadows &&
-		props->light &&
+		light &&
 		shadow_map > 0
 	);
 	int configured = shader_uniform_set(
@@ -286,16 +287,20 @@ configure_shadow_mapping(
 		configured &= shader_uniform_set(
 			&u_light_space_transform,
 			1,
-			&props->light->transform
+			&light->projection
 		);
 	}
 	return configured;
 }
 
 static int
-configure_shading(struct Material *material)
+configure_shading(struct MeshProps *props)
 {
-	Vec color = material ? material->color : vec(1, 1, 1, 1);
+	Vec color = (
+		props->material
+		? props->material->color
+		: vec(0.7, 0.7, 0.7, 1)
+	);
 	return shader_uniform_set(
 		&u_material_color,
 		1,
@@ -307,16 +312,20 @@ int
 draw_mesh(
 	struct Mesh *mesh,
 	struct MeshProps *props,
+	struct Transform *transform,
+	struct Light *light,
+	Vec *eye,
 	int shadow_map
 ) {
 	assert(mesh != NULL);
 	assert(props != NULL);
+	assert(transform != NULL);
 
 	int configured = (
 		shader_bind(shader) &&
-		shader_uniform_set(&u_model, 1, &props->model) &&
-		shader_uniform_set(&u_view, 1, &props->view) &&
-		shader_uniform_set(&u_projection, 1, &props->projection) &&
+		shader_uniform_set(&u_model, 1, &transform->model) &&
+		shader_uniform_set(&u_view, 1, &transform->view) &&
+		shader_uniform_set(&u_projection, 1, &transform->projection) &&
 		configure_skinning(
 			props->animation,
 			shader,
@@ -325,12 +334,10 @@ draw_mesh(
 			&ub_animation,
 			skin_transforms_buffer
 		) &&
-		configure_shading(props->material) &&
-		configure_texture_mapping(
-			props->material ? props->material->texture : NULL
-		) &&
-		configure_shadow_mapping(props, shadow_map) &&
-		configure_lighting(props)
+		configure_shading(props) &&
+		configure_texture_mapping(props) &&
+		configure_shadow_mapping(props, light, shadow_map) &&
+		configure_lighting(props, light, eye)
 	);
 	if (!configured) {
 		errf(ERR_GENERIC, "failed to configure mesh pipeline");

@@ -13,6 +13,9 @@ int
 draw_mesh(
 	struct Mesh *mesh,
 	struct MeshProps *props,
+	struct Transform *transform,
+	struct Light *light,
+	Vec *eye,
 	int shadow_map
 );
 
@@ -21,21 +24,26 @@ int
 init_shadow_pipeline(void);
 
 int
-draw_mesh_shadow(struct Mesh *mesh, struct MeshProps *props);
+draw_mesh_shadow(
+	struct Mesh *mesh,
+	struct MeshProps *props,
+	struct Transform *transform,
+	struct Light *light
+);
 
 // defined in draw_text.c
 int
 init_text_pipeline(void);
 
 int
-draw_text(struct Text *text, struct TextProps *props);
+draw_text(struct Text *text, struct TextProps *props, struct Transform *transform);
 
 // defined in draw_quad.c
 int
 init_quad_pipeline(void);
 
 int
-draw_quad(float w, float h, struct QuadProps *props);
+draw_quad(struct Quad *quad, struct QuadProps *props, struct Transform *transform);
 
 enum {
 	SHADOW_PASS = 1,
@@ -44,17 +52,21 @@ enum {
 
 struct RenderOp {
 	int pass;
+	struct Transform transform;
 	union {
 		struct {
 			struct Mesh *mesh;
 			struct MeshProps props;
+			struct Light light;
+			Vec eye;
+			int is_lit;
 		} mesh;
 		struct {
 			struct Text *text;
 			struct TextProps props;
 		} text;
 		struct {
-			float w, h;
+			struct Quad *quad;
 			struct QuadProps props;
 		} quad;
 	};
@@ -92,10 +104,22 @@ exec_mesh_op(struct RenderOp *op)
 	int ok = 1;
 	switch (op->pass) {
 	case SHADOW_PASS:
-		ok &= draw_mesh_shadow(op->mesh.mesh, &op->mesh.props);
+		ok &= draw_mesh_shadow(
+			op->mesh.mesh,
+			&op->mesh.props,
+			&op->transform,
+			&op->mesh.light
+		);
 		break;
 	case RENDER_PASS:
-		ok &= draw_mesh(op->mesh.mesh, &op->mesh.props, shadow_map_tu);
+		ok &= draw_mesh(
+			op->mesh.mesh,
+			&op->mesh.props,
+			&op->transform,
+			op->mesh.is_lit ? &op->mesh.light : NULL,
+			op->mesh.is_lit ? &op->mesh.eye : NULL,
+			shadow_map_tu
+		);
 		break;
 	}
 	return ok;
@@ -104,13 +128,13 @@ exec_mesh_op(struct RenderOp *op)
 static int
 exec_text_op(struct RenderOp *op)
 {
-	return draw_text(op->text.text, &op->text.props);
+	return draw_text(op->text.text, &op->text.props, &op->transform);
 }
 
 static int
 exec_quad_op(struct RenderOp *op)
 {
-	return draw_quad(op->quad.w, op->quad.h, &op->quad.props);
+	return draw_quad(op->quad.quad, &op->quad.props, &op->transform);
 }
 
 static int
@@ -217,20 +241,40 @@ renderer_shutdown(void)
 }
 
 int
-render_mesh(struct Mesh *mesh, struct MeshProps *props) {
+render_mesh(
+	struct Mesh *mesh,
+	struct MeshProps *props,
+	struct Transform *t,
+	struct Light *light,
+	Vec *eye
+) {
+	assert(mesh != NULL);
+	assert(props != NULL);
+	assert(t != NULL);
+
 	int ok = 1;
+
 	struct RenderOp op = {
+		.transform = *t,
 		.mesh = {
 			.mesh = mesh,
-			.props = *props
+			.props = *props,
 		},
 		.exec = exec_mesh_op
 	};
 
-	// shadow pass
-	if (props->cast_shadows) {
-		op.pass = SHADOW_PASS;
-		ok &= render_queue_push(&shadow_queue, &op);
+	// enable lighting and shadow casting only if light parameters are
+	// specified
+	if (light && eye) {
+		op.mesh.is_lit = 1;
+		op.mesh.light = *light;
+		op.mesh.eye = *eye;
+
+		// shadow pass
+		if (props->cast_shadows) {
+			op.pass = SHADOW_PASS;
+			ok &= render_queue_push(&shadow_queue, &op);
+		}
 	}
 
 	// render pass
@@ -241,9 +285,10 @@ render_mesh(struct Mesh *mesh, struct MeshProps *props) {
 }
 
 int
-render_text(struct Text *text, struct TextProps *props)
+render_text(struct Text *text, struct TextProps *props, struct Transform *t)
 {
 	struct RenderOp op = {
+		.transform = *t,
 		.pass = RENDER_PASS,
 		.text = {
 			.text = text,
@@ -255,13 +300,13 @@ render_text(struct Text *text, struct TextProps *props)
 }
 
 int
-render_quad(float w, float h, struct QuadProps *props)
+render_quad(struct Quad *quad, struct QuadProps *props, struct Transform *t)
 {
 	struct RenderOp op = {
+		.transform = *t,
 		.pass = RENDER_PASS,
 		.quad = {
-			.w = w,
-			.h = h,
+			.quad = quad,
 			.props = *props
 		},
 		.exec = exec_quad_op

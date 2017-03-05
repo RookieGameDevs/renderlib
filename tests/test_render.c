@@ -9,18 +9,21 @@ START_TEST(test_render_mesh_simple)
 {
 	Mat identity;
 	mat_ident(&identity);
-	struct MeshProps props = {
-		.eye = vec(0, 0, 0, 0),
-		.view = identity,
+
+	struct Transform transform = {
 		.model = identity,
-		.projection = identity,
+		.view = identity,
+		.projection = identity
+	};
+
+	struct MeshProps props = {
 		.cast_shadows = 0,
 		.receive_shadows = 0,
 		.animation = NULL,
-		.light = NULL,
 		.material = NULL
 	};
-	ck_assert(render_mesh(mesh, &props));
+
+	ck_assert(render_mesh(mesh, &props, &transform, NULL, NULL));
 	ck_assert(renderer_present());
 }
 END_TEST
@@ -39,18 +42,20 @@ START_TEST(test_render_mesh_textured)
 
 	Mat identity;
 	mat_ident(&identity);
-	struct MeshProps props = {
-		.eye = vec(0, 0, 0, 0),
-		.view = identity,
+
+	struct Transform transform = {
 		.model = identity,
-		.projection = identity,
+		.view = identity,
+		.projection = identity
+	};
+
+	struct MeshProps props = {
 		.cast_shadows = 0,
 		.receive_shadows = 0,
 		.animation = NULL,
-		.light = NULL,
 		.material = &mat
 	};
-	ck_assert(render_mesh(mesh, &props));
+	ck_assert(render_mesh(mesh, &props, &transform, NULL, NULL));
 	ck_assert(renderer_present());
 }
 END_TEST
@@ -59,21 +64,27 @@ START_TEST(test_render_mesh_shadowed)
 {
 	Mat identity;
 	mat_ident(&identity);
-	struct Light light = {
-		.transform = identity
-	};
-	struct MeshProps props = {
-		.eye = vec(0, 0, 0, 0),
-		.view = identity,
+
+	struct Transform transform = {
 		.model = identity,
-		.projection = identity,
+		.view = identity,
+		.projection = identity
+	};
+
+	struct Light light = {
+		.projection = identity
+	};
+
+	Vec eye = vec(0, 0, 0, 0);
+
+	struct MeshProps props = {
 		.cast_shadows = 1,
 		.receive_shadows = 1,
 		.animation = NULL,
-		.light = &light,
 		.material = NULL
 	};
-	ck_assert(render_mesh(mesh, &props));
+
+	ck_assert(render_mesh(mesh, &props, &transform, &light, &eye));
 	ck_assert(renderer_present());
 }
 END_TEST
@@ -88,18 +99,21 @@ START_TEST(test_render_mesh_animated)
 
 	Mat identity;
 	mat_ident(&identity);
-	struct MeshProps props = {
-		.eye = vec(0, 0, 0, 0),
-		.view = identity,
+
+	struct Transform transform = {
 		.model = identity,
-		.projection = identity,
+		.view = identity,
+		.projection = identity
+	};
+
+	struct MeshProps props = {
 		.cast_shadows = 0,
 		.receive_shadows = 0,
 		.animation = inst,
-		.light = NULL,
 		.material = NULL
 	};
-	ck_assert(render_mesh(mesh, &props));
+
+	ck_assert(render_mesh(mesh, &props, &transform, NULL, NULL));
 	ck_assert(renderer_present());
 }
 END_TEST

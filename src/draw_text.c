@@ -82,14 +82,14 @@ init_text_pipeline(void)
 }
 
 int
-draw_text(struct Text *text, struct TextProps *props)
+draw_text(struct Text *text, struct TextProps *props, struct Transform *transform)
 {
 	assert(text != NULL);
 	assert(props != NULL);
 
 	Mat mv, mvp;
-	mat_mul(&props->view, &props->model, &mv);
-	mat_mul(&props->projection, &mv, &mvp);
+	mat_mul(&transform->view, &transform->model, &mv);
+	mat_mul(&transform->projection, &mv, &mvp);
 
 	int glyph_map_sampler = 0, glyph_map = font_get_glyph_texture(text->font);
 	glActiveTexture(GL_TEXTURE0 + glyph_map_sampler);
