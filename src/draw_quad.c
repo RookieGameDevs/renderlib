@@ -26,6 +26,7 @@ static GLuint quad_vao = 0;
 static void
 cleanup(void)
 {
+	glDeleteVertexArrays(1, &quad_vao);
 	shader_free(shader);
 	shader_source_free(shader_sources[0]);
 	shader_source_free(shader_sources[1]);
