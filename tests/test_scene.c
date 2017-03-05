@@ -3,7 +3,6 @@
 #include <check.h>
 #include <stdlib.h>
 
-
 START_TEST(test_create_and_initialize)
 {
 	struct Scene *scene = scene_new();
@@ -42,11 +41,29 @@ START_TEST(test_render)
 		.material = NULL
 	};
 
+	Mat identity;
+	mat_ident(&identity);
+
+	struct Camera camera = {
+		.position = vec(0, 0, 0, 0),
+		.view = identity,
+		.projection = identity
+	};
+
+	struct Light light = {
+		.projection = identity,
+		.direction = vec(0, -1, 0, 0),
+		.color = vec(1, 1, 1, 1),
+		.ambient_intensity = 0.3,
+		.diffuse_intensity = 0.8
+	};
+
 	struct Scene *scene = scene_new();
 	struct Object *obj = scene_add_mesh(scene, mesh, &props);
 	ck_assert(obj);
 
-	scene_render(scene, NULL);
+	int ok = scene_render(scene, &camera, &light);
+	ck_assert(ok);
 
 	scene_free(scene);
 	mesh_free(mesh);

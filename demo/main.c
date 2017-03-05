@@ -23,6 +23,8 @@ static struct {
 static struct Camera camera;
 static struct Camera ui_camera;
 static struct Light light;
+static struct Scene *scene = NULL;
+static struct Scene *ui_scene = NULL;
 
 // main model
 static struct Mesh *model_mesh = NULL;
@@ -31,7 +33,7 @@ static struct Image *model_image = NULL;
 static struct Texture *model_texture = NULL;
 static struct Material model_material;
 static struct MeshProps model_props;
-static struct Transform model_transform;
+static struct Object *model_object = NULL;
 
 // terrain model
 static struct Mesh *terrain_mesh = NULL;
@@ -39,20 +41,20 @@ static struct Image *terrain_image = NULL;
 static struct Texture *terrain_texture = NULL;
 static struct Material terrain_material;
 static struct MeshProps terrain_props;
-static struct Transform terrain_transform;
+static struct Object *terrain_object = NULL;
 
 // fps counter
 static struct Text *fps_text = NULL;
 static struct Font *fps_font = NULL;
 static struct TextProps fps_props;
-static struct Transform fps_transform;
+static struct Object *fps_object = NULL;
 
 // close button
 static struct Quad btn_quad = { .width = 38, .height = 36 };
 static struct Image *btn_image = NULL;
 static struct Texture *btn_texture = NULL;
 static struct QuadProps btn_props;
-static struct Transform btn_transform;
+static struct Object *btn_object = NULL;
 
 static int
 init(unsigned width, unsigned height)
@@ -209,26 +211,6 @@ update(float dt)
 		animation_instance_play(model_animation, dt);
 	}
 
-	// update transforms
-	model_transform.model = model_mesh->transform;
-	model_transform.view = camera.view;
-	model_transform.projection = camera.projection;
-
-	terrain_transform.model = terrain_mesh->transform;
-	mat_scale(&terrain_transform.model, 2, 2, 2);
-	terrain_transform.view = camera.view;
-	terrain_transform.projection = camera.projection;
-
-	mat_ident(&fps_transform.model);
-	mat_translate(&fps_transform.model, -WIDTH / 2 + 10, HEIGHT / 2 - 10, 0);
-	fps_transform.view = ui_camera.view;
-	fps_transform.projection = ui_camera.projection;
-
-	mat_ident(&btn_transform.model);
-	mat_translate(&btn_transform.model, WIDTH / 2 - 40, HEIGHT / 2 - 2, 0);
-	btn_transform.view = ui_camera.view;
-	btn_transform.projection = ui_camera.projection;
-
 	return 1;
 }
 
@@ -238,22 +220,8 @@ render(void)
 	renderer_clear();
 
 	int ok = (
-		render_mesh(
-			model_mesh,
-			&model_props,
-			&model_transform,
-			&light,
-			&camera.position
-		) &&
-		render_mesh(
-			terrain_mesh,
-			&terrain_props,
-			&terrain_transform,
-			&light,
-			&camera.position
-		) &&
-		render_text(fps_text, &fps_props, &fps_transform) &&
-		render_quad(&btn_quad, &btn_props, &btn_transform) &&
+		scene_render(scene, &camera, &light) &&
+		scene_render(ui_scene, &ui_camera, NULL) &&
 		renderer_present()
 	);
 
@@ -317,6 +285,25 @@ load_resources(void)
 	return 1;
 }
 
+static int
+setup_scene(void)
+{
+	if (!(scene = scene_new()) ||
+	    !(ui_scene = scene_new()) ||
+	    !(model_object = scene_add_mesh(scene, model_mesh, &model_props)) ||
+	    !(terrain_object = scene_add_mesh(scene, terrain_mesh, &terrain_props)) ||
+	    !(fps_object = scene_add_text(ui_scene, fps_text, &fps_props)) ||
+	    !(btn_object = scene_add_quad(ui_scene, &btn_quad, &btn_props))) {
+		return 0;
+	}
+
+	terrain_object->scale = vec(2, 2, 2, 0);
+	fps_object->position = vec(-WIDTH / 2 + 10, HEIGHT / 2 - 10, 0, 0);
+	btn_object->position = vec(WIDTH / 2 - 40, HEIGHT / 2 - 2, 0, 0);
+
+	return 1;
+}
+
 static void
 cleanup_resources(void)
 {
@@ -331,6 +318,8 @@ cleanup_resources(void)
 	image_free(model_image);
 	animation_instance_free(model_animation);
 	mesh_free(model_mesh);
+	scene_free(ui_scene);
+	scene_free(scene);
 }
 
 static void
@@ -369,7 +358,8 @@ main(int argc, char *argv[])
 {
 	int ok = (
 		init(WIDTH, HEIGHT) &&
-		load_resources()
+		load_resources() &&
+		setup_scene()
 	);
 
 	int run = 1;

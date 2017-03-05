@@ -3,6 +3,7 @@
 #include <matlib.h>
 
 struct Camera;
+struct Light;
 struct Mesh;
 struct Quad;
 struct Text;
@@ -37,7 +38,7 @@ size_t
 scene_object_count(struct Scene *scene);
 
 int
-scene_render(struct Scene *scene, struct Camera *camera);
+scene_render(struct Scene *scene, struct Camera *camera, struct Light *light);
 
 void
 scene_free(struct Scene *scene);
