@@ -1,4 +1,5 @@
 #include "anim.h"
+#include "camera.h"
 #include "error.h"
 #include "font.h"
 #include "image.h"
@@ -8,15 +9,6 @@
 #include "text.h"
 #include "texture.h"
 #include <matlib.h>
-
-/**
- * Camera.
- */
-struct Camera {
-	Vec position;
-	Mat view;
-	Mat projection;
-};
 
 /**
  * Light.

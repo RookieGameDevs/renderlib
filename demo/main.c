@@ -100,11 +100,8 @@ init(unsigned width, unsigned height)
 	float aspect = WIDTH / (float)HEIGHT;
 
 	// initialize 2D orthographic camera for UI
-	memset(&ui_camera, 0, sizeof(struct Camera));
-	mat_ident(&ui_camera.projection);
-	mat_ident(&ui_camera.view);
-	mat_ortho(
-		&ui_camera.projection,
+	camera_init_orthographic(
+		&ui_camera,
 		-WIDTH / 2,
 		+WIDTH / 2,
 		+HEIGHT / 2,
@@ -114,11 +111,8 @@ init(unsigned width, unsigned height)
 	);
 
 	// initialize camera
-	memset(&camera, 0, sizeof(struct Camera));
-	mat_ident(&camera.projection);
-	mat_ident(&camera.view);
-	mat_persp(
-		&camera.projection,
+	camera_init_perspective(
+		&camera,
 		30.0f,
 		WIDTH / (float)HEIGHT,
 		1,
