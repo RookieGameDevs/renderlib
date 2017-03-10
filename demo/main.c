@@ -16,8 +16,16 @@
 static SDL_Window *window = NULL;
 static SDL_GLContext *context = NULL;
 
+enum {
+	STATE_INITIAL,
+	STATE_ROTATE_CAMERA
+};
+
 static struct {
 	int play_animation;
+	int last_mouse_x;
+	int last_mouse_y;
+	int state;
 } controls;
 
 static struct Camera camera;
@@ -96,6 +104,7 @@ init(unsigned width, unsigned height)
 
 	// initialize controls
 	controls.play_animation = 0;
+	controls.state = STATE_INITIAL;
 
 	float aspect = WIDTH / (float)HEIGHT;
 
@@ -175,6 +184,100 @@ shutdown(void)
 	SDL_Quit();
 }
 
+static void
+on_mouse_down(struct SDL_MouseButtonEvent *evt)
+{
+	switch (controls.state) {
+	case STATE_INITIAL:
+		if (evt->button == SDL_BUTTON_LEFT) {
+			controls.state = STATE_ROTATE_CAMERA;
+			controls.last_mouse_x = evt->x;
+			controls.last_mouse_y = evt->y;
+		}
+		break;
+	}
+}
+
+static void
+on_mouse_up(struct SDL_MouseButtonEvent *evt)
+{
+	switch (controls.state) {
+	case STATE_ROTATE_CAMERA:
+		if (evt->button == SDL_BUTTON_LEFT) {
+			controls.state = STATE_INITIAL;
+		}
+		break;
+	}
+}
+
+static Vec
+get_arcball_vector(float x, float y)
+{
+	int w, h;
+	SDL_GetWindowSize(window, &w, &h);
+
+	Vec v = vec(
+		x / w * 2.0 - 1.0,
+		-(y / h * 2.0 - 1.0),
+		0,
+		0
+	);
+
+	float sq_dist = v.data[0] * v.data[0] + v.data[1] * v.data[1];
+	if (sq_dist <= 1.0) {
+		v.data[2] = sqrt(1 - sq_dist);
+	} else {
+		vec_norm(&v);
+	}
+
+	return v;
+}
+
+static void
+rotate_view(int x, int y)
+{
+	// compute vectors from arcball surface to origin
+	Vec v2 = get_arcball_vector(x, y);
+	Vec v1 = get_arcball_vector(controls.last_mouse_x, controls.last_mouse_y);
+
+	// compute the angle between them
+	float angle = acos(fmin(1.0, vec_dot(&v1, &v2)));
+
+	// determine the rotation axis
+	Vec axis;
+	vec_cross(&v1, &v2, &axis);
+	if (vec_mag(&axis) < 1e-3f) {
+		return;
+	}
+	vec_norm(&axis);
+
+	Vec cam_axis;
+	Mat inv_view_m;
+	mat_inverse(&camera.view, &inv_view_m);
+	mat_mulv(&inv_view_m, &axis, &cam_axis);
+	axis = cam_axis;
+
+	Mat rot_m;
+	mat_ident(&rot_m);
+	mat_rotatev(&rot_m, &axis, angle);
+	Mat tmp;
+	mat_mul(&camera.view, &rot_m, &tmp);
+	camera.view = tmp;
+
+	controls.last_mouse_x = x;
+	controls.last_mouse_y = y;
+}
+
+static void
+on_mouse_move(struct SDL_MouseMotionEvent *evt)
+{
+	switch (controls.state) {
+	case STATE_ROTATE_CAMERA:
+		rotate_view(evt->x, evt->y);
+		break;
+	}
+}
+
 static int
 update(float dt)
 {
@@ -197,6 +300,14 @@ update(float dt)
 			   evt.button.y >= 2 &&
 		           evt.button.y <= 40) {
 			return 0;
+		}
+
+		if (evt.type == SDL_MOUSEBUTTONDOWN) {
+			on_mouse_down(&evt.button);
+		} else if (evt.type == SDL_MOUSEBUTTONUP) {
+			on_mouse_up(&evt.button);
+		} else if (evt.type == SDL_MOUSEMOTION) {
+			on_mouse_move(&evt.motion);
 		}
 	}
 
