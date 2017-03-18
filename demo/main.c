@@ -123,9 +123,9 @@ init(unsigned width, unsigned height)
 	camera_init_perspective(
 		&camera,
 		30.0f,
-		WIDTH / (float)HEIGHT,
+		aspect,
 		1,
-		100
+		50
 	);
 	mat_lookat(
 		&camera.view,
@@ -136,28 +136,12 @@ init(unsigned width, unsigned height)
 	camera.position = vec(5, 5, 5, 0);
 
 	// initialize light
-	light.direction = vec(0, -5, -5, 0);
-	vec_norm(&light.direction);
 	light.color = vec(1, 1, 1, 1);
 	light.ambient_intensity = 0.3;
 	light.diffuse_intensity = 1.0;
-	Mat view, proj;
-	mat_ortho(
-		&proj,
-		-5.0,
-		+5.0,
-		+5.0 * aspect,
-		-5.0 * aspect,
-		0,
-		10
-	);
-	mat_lookat(
-		&view,
-		0.0, 5.0, 5.0, // eye
-		0.0, 0.0, 0.0, // target
-		0.0, 1.0, 0.0  // up
-	);
-	mat_mul(&proj, &view, &light.projection);
+	light.direction = vec(0, -5, -5, 0);
+	vec_norm(&light.direction);
+	light_update_projection(&light, &camera);
 
 	return renderer_init();
 }

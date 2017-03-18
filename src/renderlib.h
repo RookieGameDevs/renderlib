@@ -1,25 +1,18 @@
+// renderlib
 #include "anim.h"
 #include "camera.h"
 #include "error.h"
 #include "font.h"
 #include "image.h"
+#include "light.h"
 #include "mesh.h"
 #include "scene.h"
 #include "shader.h"
 #include "text.h"
 #include "texture.h"
-#include <matlib.h>
 
-/**
- * Light.
- */
-struct Light {
-	Mat projection;
-	Vec direction;
-	Vec color;
-	float ambient_intensity;
-	float diffuse_intensity;
-};
+// matlib
+#include <matlib.h>
 
 /**
  * Material.
