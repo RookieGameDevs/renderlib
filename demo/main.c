@@ -127,13 +127,10 @@ init(unsigned width, unsigned height)
 		1,
 		50
 	);
-	mat_lookat(
-		&camera.view,
-		5, 5, 5, // eye
-		0, 0, 0, // target
-		0, 1, 0  // up
-	);
-	camera.position = vec(5, 5, 5, 0);
+	Vec eye = vec(5, 5, 5, 0);
+	Vec origin = vec(0, 0, 0, 0);
+	camera_set_position(&camera, &eye);
+	camera_look_at(&camera, &origin);
 
 	// initialize light
 	light.color = vec(1, 1, 1, 1);
