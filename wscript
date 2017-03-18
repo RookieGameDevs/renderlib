@@ -173,14 +173,17 @@ def build(bld):
         '${PREFIX}/include/renderlib',
         [
             'src/anim.h',
-            'src/string_utils.h',
-            'src/image.h',
-            'src/text.h',
-            'src/renderlib.h',
+            'src/camera.h',
             'src/error.h',
             'src/font.h',
+            'src/image.h',
+            'src/light.h',
             'src/mesh.h',
+            'src/renderlib.h',
+            'src/scene.h',
             'src/shader.h',
+            'src/string_utils.h',
+            'src/text.h',
             'src/texture.h',
         ])
 
