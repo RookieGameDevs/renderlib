@@ -202,6 +202,10 @@ scene_render(struct Scene *scene, struct Camera *camera, struct Light *light)
 	struct HashTableIter iter;
 	hash_table_iter_init(scene->objects, &iter);
 
+	if (light) {
+		light_update_projection(light, camera);
+	}
+
 	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
 		if (!renderers[info->type](obj, info, camera, light)) {
 			return 0;

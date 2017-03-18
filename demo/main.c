@@ -141,7 +141,6 @@ init(unsigned width, unsigned height)
 	light.diffuse_intensity = 1.0;
 	light.direction = vec(0, -5, -5, 0);
 	vec_norm(&light.direction);
-	light_update_projection(&light, &camera);
 
 	return renderer_init();
 }
