@@ -21,11 +21,19 @@ enum {
 	STATE_ROTATE_CAMERA
 };
 
+enum {
+	MOVE_LEFT = 1,
+	MOVE_RIGHT = 1 << 1,
+	MOVE_UP = 1 << 2,
+	MOVE_DOWN = 1 << 3
+};
+
 static struct {
 	int play_animation;
 	int last_mouse_x;
 	int last_mouse_y;
 	int state;
+	int move_flags;
 } controls;
 
 static struct Camera camera;
@@ -105,6 +113,7 @@ init(unsigned width, unsigned height)
 	// initialize controls
 	controls.play_animation = 0;
 	controls.state = STATE_INITIAL;
+	controls.move_flags = 0;
 
 	float aspect = WIDTH / (float)HEIGHT;
 
@@ -127,10 +136,12 @@ init(unsigned width, unsigned height)
 		1,
 		50
 	);
+	Vec pos = vec(0, 0, 10, 0);
 	Vec eye = vec(5, 5, 5, 0);
 	Vec origin = vec(0, 0, 0, 0);
-	camera_set_position(&camera, &eye);
-	camera_look_at(&camera, &origin);
+	Vec up = vec(0, 1, 0, 0);
+	camera_set_position(&camera, &pos);
+	camera_look_at(&camera, &eye, &origin, &up);
 
 	// initialize light
 	light.color = vec(1, 1, 1, 1);
@@ -282,6 +293,30 @@ update(float dt)
 			return 0;
 		}
 
+		int bit = 0;
+		if (evt.type == SDL_KEYDOWN || evt.type == SDL_KEYUP) {
+			switch (evt.key.keysym.sym) {
+			case SDLK_LEFT:
+				bit = MOVE_LEFT;
+				break;
+			case SDLK_RIGHT:
+				bit = MOVE_RIGHT;
+				break;
+			case SDLK_UP:
+				bit = MOVE_UP;
+				break;
+			case SDLK_DOWN:
+				bit = MOVE_DOWN;
+				break;
+			}
+
+			if (evt.type == SDL_KEYDOWN) {
+				controls.move_flags |= bit;
+			} else {
+				controls.move_flags &= ~bit;
+			}
+		}
+
 		if (evt.type == SDL_MOUSEBUTTONDOWN) {
 			on_mouse_down(&evt.button);
 		} else if (evt.type == SDL_MOUSEBUTTONUP) {
@@ -295,6 +330,27 @@ update(float dt)
 	if (controls.play_animation) {
 		animation_instance_play(model_animation, dt);
 	}
+
+	float dx = 0, dy = 0;
+	if (controls.move_flags & MOVE_LEFT) {
+		dx--;
+	}
+	if (controls.move_flags & MOVE_RIGHT) {
+		dx++;
+	}
+	if (controls.move_flags & MOVE_UP) {
+		dy--;
+	}
+	if (controls.move_flags & MOVE_DOWN) {
+		dy++;
+	}
+	Vec pos = vec(
+		camera.position.data[0] + dx * 5.0 * dt,
+		camera.position.data[1],
+		camera.position.data[2] + dy * 5.0 * dt,
+		0
+	);
+	camera_set_position(&camera, &pos);
 
 	return 1;
 }
