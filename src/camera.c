@@ -57,14 +57,13 @@ update_view_matrix(struct Camera *cam)
 {
 	mat_ident(&cam->view);
 
+	// translate
+	Vec v = cam->position;
+	vec_imulf(&v, -1);
+	mat_translatev(&cam->view, &v);
+
 	// rotate
 	mat_rotateq(&cam->view, &cam->orientation);
-
-	// translate
-	Vec tv = cam->position;
-	vec_imulf(&tv, -1);
-	mat_translatev(&cam->view, &tv);
-
 }
 
 void
@@ -88,14 +87,14 @@ camera_set_orientation(struct Camera *camera, const Qtr *rot)
 }
 
 void
-camera_look_at(struct Camera *camera, const Vec *target)
+camera_look_at(struct Camera *camera, const Vec *eye, const Vec *target, const Vec *up)
 {
 	assert(camera != NULL);
 	assert(target != NULL);
 
 	Mat look;
-	Vec up = {{ 0, 1, 0 }};
-	mat_lookatv(&look, &camera->position, target, &up);
+	mat_lookatv(&look, eye, target, up);
 	camera->orientation = mat_get_rotation(&look);
+
 	update_view_matrix(camera);
 }

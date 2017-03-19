@@ -45,4 +45,4 @@ void
 camera_set_orientation(struct Camera *camera, const Qtr *rot);
 
 void
-camera_look_at(struct Camera *camera, const Vec *target);
+camera_look_at(struct Camera *camera, const Vec *eye, const Vec *target, const Vec *up);
