@@ -49,3 +49,21 @@ camera_init_orthographic(
 	mat_ident(&camera->view);
 	mat_ortho(&camera->projection, left, right, top, bottom, near, far);
 }
+
+void
+camera_get_matrices(struct Camera *camera, Mat *view, Mat *projection)
+{
+	assert(camera != NULL);
+	assert(view != NULL);
+	assert(projection != NULL);
+
+	Mat tm;
+	mat_ident(&tm);
+	Vec tv = camera->position;
+	vec_imulf(&tv, -1);
+	mat_translatev(&tm, &tv);
+
+	mat_mul(&camera->view, &tm, view);
+
+	*projection = camera->projection;
+}

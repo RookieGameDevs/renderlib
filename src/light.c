@@ -26,8 +26,10 @@ light_update_projection(struct Light *light, struct Camera *camera)
 
 	// combine the inverse of camera view-projection and the inverse of
 	// light space transform
+	Mat cam_proj, cam_view;
+	camera_get_matrices(camera, &cam_view, &cam_proj);
 	Mat inv_proj_view_light, inv_proj_view, inv_light, tmp;
-	mat_mul(&camera->projection, &camera->view, &tmp);
+	mat_mul(&cam_proj, &cam_view, &tmp);
 	mat_inverse(&tmp, &inv_proj_view);
 	mat_inverse(&light_space, &inv_light);
 	mat_mul(&inv_proj_view, &inv_light, &inv_proj_view_light);

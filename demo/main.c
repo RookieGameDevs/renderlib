@@ -136,12 +136,11 @@ init(unsigned width, unsigned height)
 		1,
 		50
 	);
-	Vec pos = vec(0, 0, 10, 0);
 	Vec eye = vec(5, 5, 5, 0);
 	Vec origin = vec(0, 0, 0, 0);
 	Vec up = vec(0, 1, 0, 0);
-	camera_set_position(&camera, &pos);
-	camera_look_at(&camera, &eye, &origin, &up);
+	camera.position = eye;
+	mat_lookatv(&camera.view, &eye, &origin, &up);
 
 	// initialize light
 	light.color = vec(1, 1, 1, 1);
@@ -344,13 +343,12 @@ update(float dt)
 	if (controls.move_flags & MOVE_DOWN) {
 		dy++;
 	}
-	Vec pos = vec(
+	camera.position = vec(
 		camera.position.data[0] + dx * 5.0 * dt,
 		camera.position.data[1],
 		camera.position.data[2] + dy * 5.0 * dt,
 		0
 	);
-	camera_set_position(&camera, &pos);
 
 	return 1;
 }

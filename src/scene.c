@@ -48,12 +48,10 @@ draw_mesh_object(
 	struct Light *light
 ) {
 	struct Mesh *mesh = info->ptr;
-	struct Transform t = {
-		.view = camera->view,
-		.projection = camera->projection
-	};
+	struct Transform t;
 	Mat object_matrix = compute_object_matrix(object);
 	mat_mul(&object_matrix, &mesh->transform, &t.model);
+	camera_get_matrices(camera, &t.view, &t.projection);
 
 	return render_mesh(mesh, info->props, &t, light, &camera->position);
 }
@@ -67,9 +65,8 @@ draw_text_object(
 ) {
 	struct Transform t = {
 		.model = compute_object_matrix(object),
-		.view = camera->view,
-		.projection = camera->projection
 	};
+	camera_get_matrices(camera, &t.view, &t.projection);
 	return render_text(info->ptr, info->props, &t);
 }
 
@@ -82,9 +79,8 @@ draw_quad_object(
 ) {
 	struct Transform t = {
 		.model = compute_object_matrix(object),
-		.view = camera->view,
-		.projection = camera->projection
 	};
+	camera_get_matrices(camera, &t.view, &t.projection);
 	return render_quad(info->ptr, info->props, &t);
 }
 
