@@ -343,12 +343,15 @@ update(float dt)
 	if (controls.move_flags & MOVE_DOWN) {
 		dy++;
 	}
-	camera.position = vec(
-		camera.position.data[0] + dx * 5.0 * dt,
-		camera.position.data[1],
-		camera.position.data[2] + dy * 5.0 * dt,
-		0
-	);
+
+	dx *= dt;
+	dy *= dt;
+	Vec right = {{camera.view.data[0], camera.view.data[1], camera.view.data[2]}};
+	vec_imulf(&right, dx);
+	Vec forward = {{camera.view.data[8], camera.view.data[9], camera.view.data[10]}};
+	vec_imulf(&forward, dy);
+	vec_iadd(&camera.position, &right);
+	vec_iadd(&camera.position, &forward);
 
 	return 1;
 }
