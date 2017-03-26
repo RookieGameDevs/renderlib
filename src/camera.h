@@ -13,7 +13,6 @@ enum {
 struct Camera {
 	int type;
 	Vec position;
-	Qtr orientation;
 	Mat view;
 	Mat projection;
 };
@@ -37,12 +36,3 @@ camera_init_orthographic(
 	float near,
 	float far
 );
-
-void
-camera_set_position(struct Camera *camera, const Vec *pos);
-
-void
-camera_set_orientation(struct Camera *camera, const Qtr *rot);
-
-void
-camera_look_at(struct Camera *camera, const Vec *eye, const Vec *target, const Vec *up);

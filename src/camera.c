@@ -23,7 +23,6 @@ camera_init_perspective(
 
 	camera->type = CAMERA_ORTHOGRAPHIC;
 	camera->position = vec(0, 0, 0, 0);
-	camera->orientation = qtr(1, 0, 0, 0);
 	mat_ident(&camera->view);
 	mat_persp(&camera->projection, fovy, aspect, near, far);
 }
@@ -47,54 +46,6 @@ camera_init_orthographic(
 
 	camera->type = CAMERA_ORTHOGRAPHIC;
 	camera->position = vec(0, 0, 0, 0);
-	camera->orientation = qtr(1, 0, 0, 0);
 	mat_ident(&camera->view);
 	mat_ortho(&camera->projection, left, right, top, bottom, near, far);
-}
-
-static void
-update_view_matrix(struct Camera *cam)
-{
-	mat_ident(&cam->view);
-
-	// translate
-	Vec v = cam->position;
-	vec_imulf(&v, -1);
-	mat_translatev(&cam->view, &v);
-
-	// rotate
-	mat_rotateq(&cam->view, &cam->orientation);
-}
-
-void
-camera_set_position(struct Camera *camera, const Vec *pos)
-{
-	assert(camera != NULL);
-	assert(pos != NULL);
-
-	camera->position = *pos;
-	update_view_matrix(camera);
-}
-
-void
-camera_set_orientation(struct Camera *camera, const Qtr *rot)
-{
-	assert(camera != NULL);
-	assert(rot != NULL);
-
-	camera->orientation = *rot;
-	update_view_matrix(camera);
-}
-
-void
-camera_look_at(struct Camera *camera, const Vec *eye, const Vec *target, const Vec *up)
-{
-	assert(camera != NULL);
-	assert(target != NULL);
-
-	Mat look;
-	mat_lookatv(&look, eye, target, up);
-	camera->orientation = mat_get_rotation(&look);
-
-	update_view_matrix(camera);
 }
