@@ -20,37 +20,39 @@ struct ObjectInfo {
 	int type;
 	void *ptr;
 	void *props;
+	Mat matrix;
 };
 
 typedef int (*RenderFunc)(
-	const struct Object*,
-	const struct ObjectInfo*,
+	struct Object*,
+	struct ObjectInfo*,
 	struct Camera*,
 	struct Light*
 );
 
-inline static Mat
-compute_object_matrix(const struct Object *object)
+inline static void
+update_object(const struct Object *object, struct ObjectInfo *info)
 {
-	Mat m;
-	mat_ident(&m);
-	mat_translatev(&m, &object->position);
-	mat_rotateq(&m, &object->rotation);
-	mat_scalev(&m, &object->scale);
-	return m;
+	// compute object world transform matrix
+	mat_ident(&info->matrix);
+	mat_translatev(&info->matrix, &object->position);
+	mat_rotateq(&info->matrix, &object->rotation);
+	mat_scalev(&info->matrix, &object->scale);
+
+	// update the axis aligned bounding box
+	// TODO
 }
 
 static int
 draw_mesh_object(
-	const struct Object *object,
-	const struct ObjectInfo *info,
+	struct Object *object,
+	struct ObjectInfo *info,
 	struct Camera *camera,
 	struct Light *light
 ) {
 	struct Mesh *mesh = info->ptr;
 	struct Transform t;
-	Mat object_matrix = compute_object_matrix(object);
-	mat_mul(&object_matrix, &mesh->transform, &t.model);
+	mat_mul(&info->matrix, &mesh->transform, &t.model);
 	camera_get_matrices(camera, &t.view, &t.projection);
 
 	return render_mesh(mesh, info->props, &t, light, &camera->position);
@@ -58,28 +60,26 @@ draw_mesh_object(
 
 static int
 draw_text_object(
-	const struct Object *object,
-	const struct ObjectInfo *info,
+	struct Object *object,
+	struct ObjectInfo *info,
 	struct Camera *camera,
 	struct Light *light
 ) {
-	struct Transform t = {
-		.model = compute_object_matrix(object),
-	};
+	struct Transform t;
+	t.model = info->matrix;
 	camera_get_matrices(camera, &t.view, &t.projection);
 	return render_text(info->ptr, info->props, &t);
 }
 
 static int
 draw_quad_object(
-	const struct Object *object,
-	const struct ObjectInfo *info,
+	struct Object *object,
+	struct ObjectInfo *info,
 	struct Camera *camera,
 	struct Light *light
 ) {
-	struct Transform t = {
-		.model = compute_object_matrix(object),
-	};
+	struct Transform t;
+	t.model = info->matrix;
 	camera_get_matrices(camera, &t.view, &t.projection);
 	return render_quad(info->ptr, info->props, &t);
 }
@@ -192,16 +192,23 @@ scene_free(struct Scene *scene)
 int
 scene_render(struct Scene *scene, struct Camera *camera, struct Light *light)
 {
-	const struct Object *obj = NULL;
+	struct Object *obj = NULL;
 	struct ObjectInfo *info = NULL;
-
 	struct HashTableIter iter;
-	hash_table_iter_init(scene->objects, &iter);
 
+	// update scene objects' bounding boxes
+	hash_table_iter_init(scene->objects, &iter);
+	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
+		update_object(obj, info);
+	}
+
+	// update light projection frustum
 	if (light) {
 		light_update_projection(light, camera);
 	}
 
+	// render scene objects
+	hash_table_iter_init(scene->objects, &iter);
 	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
 		if (!renderers[info->type](obj, info, camera, light)) {
 			return 0;

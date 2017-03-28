@@ -50,6 +50,45 @@ enum {
 	VERTEX_HAS_JOINTS    = 1 << 3
 };
 
+static void
+init_aabb(struct Mesh *m, void *vdata, size_t vsize, size_t vcount)
+{
+	// compute initial axis-aligned bounding box from raw vertex coordinates
+	Vec near, far;
+	int first_run = 1;
+	for (size_t i = 0; i < vcount; i++) {
+		float *v = vdata + i * vsize;
+
+		if (first_run) {
+			first_run = 0;
+			near = far = vec(v[0], v[1], v[2], 0);
+			continue;
+		}
+
+		for (short j = 0; j < 3; j++) {
+			near.data[j] = fmax(near.data[j], v[j]);
+			far.data[j] = fmin(far.data[j], v[j]);
+		}
+	}
+
+	// apply mesh transform to the bounding box vertices
+	Vec near1, far1;
+	mat_mulv(&m->transform, &near, &near1);
+	mat_mulv(&m->transform, &far, &far1);
+
+	// compute the final axis-aligned bounding box
+	first_run = 1;
+	for (short j = 0; j < 3; j++) {
+		if (first_run) {
+			first_run = 0;
+			m->aabb.near = near1;
+			m->aabb.far = far1;
+			continue;
+		}
+		m->aabb.near.data[j] = fmax(m->aabb.near.data[j], near1.data[j]);
+		m->aabb.far.data[j] = fmin(m->aabb.far.data[j], far1.data[j]);
+	}
+}
 
 static int
 init_gl_objects(struct Mesh *m, void *vdata, void *idata)
@@ -389,6 +428,7 @@ mesh_from_buffer(const void *data, size_t size)
 	if (!init_gl_objects(m, vertex_data, index_data)) {
 		goto error;
 	}
+	init_aabb(m, vertex_data, m->vertex_size, m->vertex_count);
 
 cleanup:
 	free(index_data);
@@ -473,6 +513,7 @@ mesh_new(
 	if (!init_gl_objects(m, vertex_data, indices)) {
 		goto error;
 	}
+	init_aabb(m, vertex_data, vertex_count, vertex_size);
 
 	return m;
 

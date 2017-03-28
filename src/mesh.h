@@ -1,5 +1,6 @@
 #pragma once
 
+#include "types.h"
 #include <GL/glew.h>
 #include <matlib.h>
 #include <stddef.h>
@@ -15,6 +16,7 @@ struct Mesh {
 	size_t index_count;
 
 	Mat transform;
+	struct AABB aabb;
 
 	struct Skeleton *skeleton;
 	struct Animation *animations;
