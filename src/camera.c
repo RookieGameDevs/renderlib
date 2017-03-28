@@ -21,7 +21,7 @@ camera_init_perspective(
 	assert(near < far);
 	assert_float_ne(near, far);
 
-	camera->type = CAMERA_ORTHOGRAPHIC;
+	camera->type = CAMERA_PERSPECTIVE;
 	camera->position = vec(0, 0, 0, 0);
 	mat_ident(&camera->view);
 	mat_persp(&camera->projection, fovy, aspect, near, far);
