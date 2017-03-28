@@ -133,8 +133,8 @@ init(unsigned width, unsigned height)
 		&camera,
 		30.0f,
 		aspect,
-		1,
-		50
+		5,
+		15
 	);
 	Vec eye = vec(5, 5, 5, 0);
 	Vec origin = vec(0, 0, 0, 0);
@@ -146,7 +146,7 @@ init(unsigned width, unsigned height)
 	light.color = vec(1, 1, 1, 1);
 	light.ambient_intensity = 0.3;
 	light.diffuse_intensity = 1.0;
-	light.direction = vec(0, -5, -5, 0);
+	light.direction = vec(5, -5, -5, 0);
 	vec_norm(&light.direction);
 
 	return renderer_init();
