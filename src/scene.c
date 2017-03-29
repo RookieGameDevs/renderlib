@@ -20,7 +20,6 @@ struct ObjectInfo {
 	int type;
 	void *ptr;
 	void *props;
-	Mat matrix;
 };
 
 typedef int (*RenderFunc)(
@@ -30,17 +29,41 @@ typedef int (*RenderFunc)(
 	struct Light*
 );
 
-inline static void
-update_object(const struct Object *object, struct ObjectInfo *info)
+static void
+update_object(struct Object *object, struct ObjectInfo *info)
 {
 	// compute object world transform matrix
-	mat_ident(&info->matrix);
-	mat_translatev(&info->matrix, &object->position);
-	mat_rotateq(&info->matrix, &object->rotation);
-	mat_scalev(&info->matrix, &object->scale);
+	if (object->update) {
+		mat_ident(&object->transform);
+		mat_translatev(&object->transform, &object->position);
+		mat_rotateq(&object->transform, &object->rotation);
+		mat_scalev(&object->transform, &object->scale);
+	}
 
 	// update the axis aligned bounding box
-	// TODO
+	switch (info->type) {
+	case OBJECT_TYPE_MESH:
+		object->bounding_box = ((struct Mesh*)info->ptr)->bounding_box;
+		break;
+	case OBJECT_TYPE_TEXT:
+		object->bounding_box.near = vec(0, 0, 0, 0);
+		object->bounding_box.far = vec(
+			((struct Text*)info->ptr)->width,
+			((struct Text*)info->ptr)->height,
+			0,
+			0
+		);
+		break;
+	case OBJECT_TYPE_QUAD:
+		object->bounding_box.near = vec(0, 0, 0, 0);
+		object->bounding_box.far = vec(
+			((struct Quad*)info->ptr)->width,
+			((struct Quad*)info->ptr)->height,
+			0,
+			0
+		);
+	}
+	aabb_transform(&object->bounding_box, &object->transform);
 }
 
 static int
@@ -52,7 +75,7 @@ draw_mesh_object(
 ) {
 	struct Mesh *mesh = info->ptr;
 	struct Transform t;
-	mat_mul(&info->matrix, &mesh->transform, &t.model);
+	mat_mul(&object->transform, &mesh->transform, &t.model);
 	camera_get_matrices(camera, &t.view, &t.projection);
 
 	return render_mesh(mesh, info->props, &t, light, &camera->position);
@@ -66,7 +89,7 @@ draw_text_object(
 	struct Light *light
 ) {
 	struct Transform t;
-	t.model = info->matrix;
+	t.model = object->transform;
 	camera_get_matrices(camera, &t.view, &t.projection);
 	return render_text(info->ptr, info->props, &t);
 }
@@ -79,7 +102,7 @@ draw_quad_object(
 	struct Light *light
 ) {
 	struct Transform t;
-	t.model = info->matrix;
+	t.model = object->transform;
 	camera_get_matrices(camera, &t.view, &t.projection);
 	return render_quad(info->ptr, info->props, &t);
 }
@@ -122,6 +145,7 @@ add_new_object(struct Scene *scene, int type, void *ptr, void *props)
 	obj->position = vec(0, 0, 0, 0);
 	obj->scale = vec(1, 1, 1, 0);
 	obj->rotation = qtr(1, 0, 0, 0);
+	obj->update = 1;
 
 	struct ObjectInfo *info = malloc(sizeof(struct ObjectInfo));
 	if (!info) {
@@ -196,15 +220,24 @@ scene_render(struct Scene *scene, struct Camera *camera, struct Light *light)
 	struct ObjectInfo *info = NULL;
 	struct HashTableIter iter;
 
-	// update scene objects' bounding boxes
+	// update scene objects
 	hash_table_iter_init(scene->objects, &iter);
 	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
 		update_object(obj, info);
 	}
 
-	// update light projection frustum
 	if (light) {
-		light_update_projection(light, camera);
+		// compute scene bounding box
+		AABB bblist[scene_object_count(scene)];
+		hash_table_iter_init(scene->objects, &iter);
+		size_t i = 0;
+		while (hash_table_iter_next(&iter, (const void**)&obj, NULL)) {
+			bblist[i++] = obj->bounding_box;
+		}
+		AABB scene_bounding_box = aabb_container(bblist, i);
+
+		// update light projection frustum
+		light_update_projection(light, camera, &scene_bounding_box);
 	}
 
 	// render scene objects

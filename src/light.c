@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 void
-light_update_projection(struct Light *light, struct Camera *camera)
+light_update_projection(struct Light *light, struct Camera *camera, AABB *bounding_box)
 {
 	assert(light != NULL);
 	assert(camera != NULL);

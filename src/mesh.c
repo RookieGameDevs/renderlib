@@ -70,24 +70,10 @@ init_aabb(struct Mesh *m, void *vdata, size_t vsize, size_t vcount)
 			far.data[j] = fmin(far.data[j], v[j]);
 		}
 	}
+	m->bounding_box = aabb(&near, &far);
 
 	// apply mesh transform to the bounding box vertices
-	Vec near1, far1;
-	mat_mulv(&m->transform, &near, &near1);
-	mat_mulv(&m->transform, &far, &far1);
-
-	// compute the final axis-aligned bounding box
-	first_run = 1;
-	for (short j = 0; j < 3; j++) {
-		if (first_run) {
-			first_run = 0;
-			m->aabb.near = near1;
-			m->aabb.far = far1;
-			continue;
-		}
-		m->aabb.near.data[j] = fmax(m->aabb.near.data[j], near1.data[j]);
-		m->aabb.far.data[j] = fmin(m->aabb.far.data[j], far1.data[j]);
-	}
+	aabb_transform(&m->bounding_box, &m->transform);
 }
 
 static int

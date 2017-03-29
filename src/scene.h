@@ -1,7 +1,5 @@
 #pragma once
 
-#include "types.h"
-
 #include <matlib.h>
 
 struct Camera;
@@ -17,7 +15,9 @@ struct Object {
 	Vec position;
 	Qtr rotation;
 	Vec scale;
-	struct AABB aabb;
+	Mat transform;
+	AABB bounding_box;
+	int update;
 };
 
 struct Scene;
