@@ -46,6 +46,16 @@ struct ShaderUniformBlock {
 };
 
 /**
+ * Shader vertex attribute.
+ */
+struct ShaderAttribute {
+	const char *name;
+	GLuint index;
+	GLenum type;
+	size_t size;
+};
+
+/**
  * Shader program.
  */
 struct Shader {
@@ -54,6 +64,8 @@ struct Shader {
 	struct ShaderUniform *uniforms;
 	GLuint block_count;
 	struct ShaderUniformBlock *blocks;
+	GLuint attribute_count;
+	struct ShaderAttribute *attributes;
 };
 
 struct Shader*

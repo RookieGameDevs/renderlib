@@ -364,6 +364,51 @@ init_shader_uniforms(struct Shader *s)
 	return 1;
 }
 
+static int
+init_shader_attributes(struct Shader *s)
+{
+	// query the number of active attributes in the program and allocate
+	// memory for them
+	glGetProgramiv(s->prog, GL_ACTIVE_ATTRIBUTES, (GLint*)&s->attribute_count);
+	if (s->attribute_count > 0) {
+		size_t size = sizeof(struct ShaderAttribute) * s->attribute_count;
+		if (!(s->attributes = malloc(size))) {
+			err(ERR_NO_MEM);
+			return 0;
+		}
+		memset(s->attributes, 0, size);
+	} else {
+		return 1;
+	}
+
+	// query the maximum length of an attribute name string and reserve a
+	// buffer for it
+	GLint max_name_len;
+	glGetProgramiv(s->prog, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_name_len);
+	GLchar name[max_name_len];
+
+	// query attribute information and fill ShaderAttribute data for each
+	for (size_t i = 0; i < s->attribute_count; i++) {
+		struct ShaderAttribute *attr = &s->attributes[i];
+		attr->index = i;
+		glGetActiveAttrib(
+			s->prog,
+			i,
+			max_name_len,
+			NULL,
+			(GLint*)&attr->size,
+			&attr->type,
+			name
+		);
+		if (!(attr->name = string_copy(name))) {
+			err(ERR_NO_MEM);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 struct Shader*
 shader_new(struct ShaderSource **sources, unsigned count)
 {
@@ -411,7 +456,8 @@ shader_new(struct ShaderSource **sources, unsigned count)
 
 	// initialize shader uniforms and uniform blocks tables
 	if (!init_shader_uniform_blocks(shader) ||
-	    !init_shader_uniforms(shader)) {
+	    !init_shader_uniforms(shader) ||
+	    !init_shader_attributes(shader)) {
 		goto error;
 	}
 
@@ -493,6 +539,12 @@ shader_free(struct Shader *s)
 			free(block->uniforms);
 		}
 		free(s->blocks);
+
+		for (size_t i = 0; i < s->attribute_count; i++) {
+			free((char*)s->attributes[i].name);
+		}
+		free(s->attributes);
+
 		free(s);
 	}
 }
