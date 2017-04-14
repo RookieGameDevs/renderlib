@@ -2,6 +2,9 @@
 #include <stdlib.h>
 
 Suite*
+geometry_suite(void);
+
+Suite*
 font_suite(void);
 
 Suite*
@@ -30,6 +33,7 @@ main(int argc, char *argv[])
 	SRunner *sr = srunner_create(s);
 
 	// add external suites
+	srunner_add_suite(sr, geometry_suite());
 	srunner_add_suite(sr, font_suite());
 	srunner_add_suite(sr, image_suite());
 	srunner_add_suite(sr, mesh_suite());
