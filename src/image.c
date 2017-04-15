@@ -86,13 +86,12 @@ read_png(struct Buffer *buf, unsigned *r_width, unsigned *r_height, int *fmt) {
 	int color_type = png_get_color_type(png_ptr, info_ptr);
 	int bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 
-	// transform paletted images to RGB
 	if (color_type == PNG_COLOR_TYPE_PALETTE) {
+		// transform paletted images to RGB
 		png_set_palette_to_rgb(png_ptr);
-	}
-
-	// transform packed grayscale images to 8bit
-	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+		color_type = PNG_COLOR_TYPE_RGB;
+	} else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+		// transform packed grayscale images to 8bit
 #if PNG_LIBPNG_VER >= 10400
 		png_set_expand_gray_1_2_4_to_8(png_ptr);
 #else
@@ -101,20 +100,19 @@ read_png(struct Buffer *buf, unsigned *r_width, unsigned *r_height, int *fmt) {
 	} else if (color_type == PNG_COLOR_TYPE_GRAY ||
 	           color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
 		png_set_gray_to_rgb(png_ptr);
-	}
-
-	// strip 16bit images down to 8bit
-	else if (bit_depth == 16) {
+		color_type = PNG_COLOR_TYPE_RGB;
+	} else if (bit_depth == 16) {
+		// strip 16bit images down to 8bit
 		png_set_strip_16(png_ptr);
-	}
-	// expand 1-byte packed pixels
-	else if (bit_depth < 8) {
+	} else if (bit_depth < 8) {
+		// expand 1-byte packed pixels
 		png_set_packing(png_ptr);
 	}
 
 	// add full alpha channel
 	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
 		png_set_tRNS_to_alpha(png_ptr);
+		color_type = PNG_COLOR_TYPE_RGBA;
 	}
 
 	// retrieve image size

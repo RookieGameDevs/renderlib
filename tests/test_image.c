@@ -6,15 +6,25 @@
 
 START_TEST(test_load_png_from_file)
 {
-	struct Image *image = image_from_file("tests/data/star.png");
-	ck_assert(image != NULL);
-	ck_assert_uint_eq(image->width, 31);
-	ck_assert_uint_eq(image->height, 30);
-	ck_assert(image->data != NULL);
-	ck_assert_int_eq(image->format, IMAGE_FORMAT_RGBA);
-	image_free(image);
+	const char *files[] = {
+		"tests/data/star.png",
+		"tests/data/wrench.png",
+	};
+	unsigned sizes[][2] = {
+		{ 31, 30 },
+		{ 68, 102 },
+	};
+	for (unsigned i = 0; i < sizeof(files) / sizeof(char*); i++) {
+		struct Image *image = image_from_file(files[i]);
+		ck_assert(image != NULL);
+		ck_assert_uint_eq(image->width, sizes[i][0]);
+		ck_assert_uint_eq(image->height, sizes[i][1]);
+		ck_assert(image->data != NULL);
+		ck_assert_int_eq(image->format, IMAGE_FORMAT_RGBA);
+		image_free(image);
+	}
 
-	image = image_from_file("notfound.png");
+	struct Image *image = image_from_file("notfound.png");
 	ck_assert(image == NULL);
 }
 END_TEST
