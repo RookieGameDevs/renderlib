@@ -133,6 +133,7 @@ add_new_object(struct Scene *scene, int type, void *ptr, void *props)
 	obj->position = vec(0, 0, 0, 0);
 	obj->scale = vec(1, 1, 1, 0);
 	obj->rotation = qtr(1, 0, 0, 0);
+	obj->visible = 1;
 
 	struct ObjectInfo *info = malloc(sizeof(struct ObjectInfo));
 	if (!info) {
@@ -218,6 +219,9 @@ scene_render(
 	}
 
 	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
+		if (!obj->visible) {
+			continue;
+		}
 		if (!renderers[info->type](obj, info, camera, light, render_target)) {
 			return 0;
 		}

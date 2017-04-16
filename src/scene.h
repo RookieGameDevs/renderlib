@@ -15,6 +15,7 @@ struct Object {
 	Vec position;
 	Qtr rotation;
 	Vec scale;
+	int visible;
 };
 
 struct Scene;
