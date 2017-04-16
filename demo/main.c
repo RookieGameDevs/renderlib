@@ -59,18 +59,124 @@ static struct Material terrain_material;
 static struct MeshProps terrain_props;
 static struct Object *terrain_object = NULL;
 
-// fps counter
-static struct Text *fps_text = NULL;
-static struct Font *fps_font = NULL;
-static struct TextProps fps_props;
-static struct Object *fps_object = NULL;
 
-// close button
-static struct Quad btn_quad = { .width = 38, .height = 36 };
-static struct Image *btn_image = NULL;
-static struct Texture *btn_texture = NULL;
-static struct QuadProps btn_props;
-static struct Object *btn_object = NULL;
+#define PANEL_WIDTH (WIDTH / 4.0)
+#define PANEL_HEIGHT 150
+
+enum {
+	IMAGE_WIDGET,
+	TEXT_WIDGET
+};
+
+static struct Widget {
+	int type;
+	float size[2];
+	float position[3];
+
+	// initialized at load time
+	struct Object *object;
+
+	union {
+		struct {
+			const char *filename;
+			float borders[4];
+
+			// initialized at load time
+			struct Image *image;
+			struct Texture *texture;
+			struct Quad *quad;
+			struct QuadProps *props;
+		} image;
+
+		struct {
+			const char *font_filename;
+			int font_size;
+			const char *label;
+			float color[4];
+
+			// initialized at load time
+			struct Font *font;
+			struct Text *text;
+			struct TextProps *props;
+		} text;
+	};
+} widgets[] = {
+	// panel header
+	{
+		.type = IMAGE_WIDGET,
+		.size = {PANEL_WIDTH, 48},
+		.position = {0, 0, -0.3},
+		.image.filename = "tests/data/blue_panel.png",
+		.image.borders = {7, 5, 7, 5},
+	},
+	// panel frame
+	{
+		.type = IMAGE_WIDGET,
+		.size = {PANEL_WIDTH, PANEL_HEIGHT},
+		.position = {0, 40, -0.2},
+		.image.filename = "tests/data/grey_panel.png",
+		.image.borders = {7, 5, 7, 5},
+	},
+	// animation playback button - normal
+	{
+		.type = IMAGE_WIDGET,
+		.size = {PANEL_WIDTH * 0.8, 48},
+		.position = {(PANEL_WIDTH - PANEL_WIDTH * 0.8) / 2, 120, -0.1},
+		.image.filename = "tests/data/button-normal.png",
+		.image.borders = {6, 22, 6, 26},
+	},
+	// animation playback button - pressed
+	{
+		.type = IMAGE_WIDGET,
+		.size = {PANEL_WIDTH * 0.8, 48},
+		.position = {(PANEL_WIDTH - PANEL_WIDTH * 0.8) / 2, 120, -0.1},
+		.image.filename = "tests/data/button-pressed.png",
+		.image.borders = {6, 22, 6, 26},
+	},
+	// animation playback button - text label
+	{
+		.type = TEXT_WIDGET,
+		.position = {40, 138, 0},
+		.text.font_filename = "tests/data/kenvector_future.ttf",
+		.text.font_size = 12,
+		.text.label = "Play Animation",
+		.text.color = {0.3, 0.3, 0.3, 1.0}
+	},
+	// title
+	{
+		.type = TEXT_WIDGET,
+		.position = {20, 15, 0},
+		.text.font_filename = "tests/data/kenvector_future.ttf",
+		.text.font_size = 18,
+		.text.label = "Controls",
+		.text.color = {0.9, 0.9, 0.9, 1}
+	},
+	// FPS counter
+	{
+		.type = TEXT_WIDGET,
+		.position = {12, 50, 0},
+		.text.font_filename = "tests/data/kenvector_future.ttf",
+		.text.font_size = 16,
+		.text.label = "FPS: n/a",
+		.text.color = {0.2, 0.2, 0.2, 1}
+	},
+	// frame time
+	{
+		.type = TEXT_WIDGET,
+		.position = {12, 75, 0},
+		.text.font_filename = "tests/data/kenvector_future.ttf",
+		.text.font_size = 16,
+		.text.label = "Frame: n/a",
+		.text.color = {0.2, 0.2, 0.2, 1}
+	}
+};
+
+#define WIDGET_COUNT (sizeof(widgets) / sizeof(struct Widget))
+
+#define WIDGET_PLAYBACK_BUTTON_NORMAL (&widgets[2])
+#define WIDGET_PLAYBACK_BUTTON_PRESSED (&widgets[3])
+#define WIDGET_FPS_COUNTER (&widgets[6])
+#define WIDGET_FRAME_TIME (&widgets[7])
 
 static int
 init(unsigned width, unsigned height)
@@ -269,6 +375,62 @@ on_mouse_move(struct SDL_MouseMotionEvent *evt)
 }
 
 static int
+widget_cmp(const void *ptr1, const void *ptr2)
+{
+	int i = *(int*)ptr1, j = *(int*)ptr2;
+	float z1 = widgets[i].position[2];
+	float z2 = widgets[j].position[2];
+	if (z1 > z2) {
+		return -1;
+	} else if (fabs(z1 - z2) < 1e-6) {
+		return 0;
+	}
+	return 1;
+}
+
+static int
+ui_handle_mouse(SDL_MouseButtonEvent *evt)
+{
+	// widgets indices sorted by related widgets' Z
+	int indices[WIDGET_COUNT];
+	for (unsigned i = 0; i < WIDGET_COUNT; i++) {
+		indices[i] = i;
+	}
+	qsort(indices, WIDGET_COUNT, sizeof(int), widget_cmp);
+
+	// pick a widget
+	struct Widget *target = NULL;
+	for (unsigned i = 0; i < WIDGET_COUNT; i++) {
+		struct Widget *w = &widgets[indices[i]];
+		float x0 = w->position[0];
+		float y0 = w->position[1];
+		float x1 = x0 + w->size[0];
+		float y1 = y0 + w->size[1];
+		if (evt->x >= x0 && evt->y <= x1 &&
+		    evt->y >= y0 && evt->y <= y1) {
+			target = w;
+			break;
+		}
+	}
+
+	// toggle animation play control
+	if ((target == WIDGET_PLAYBACK_BUTTON_NORMAL ||
+	     target == WIDGET_PLAYBACK_BUTTON_PRESSED) &&
+	    evt->state == SDL_RELEASED) {
+		controls.play_animation = !controls.play_animation;
+	}
+
+	return target != NULL;
+}
+
+static int
+ui_update(void) {
+	WIDGET_PLAYBACK_BUTTON_NORMAL->object->visible = !controls.play_animation;
+	WIDGET_PLAYBACK_BUTTON_PRESSED->object->visible = controls.play_animation;
+	return 1;
+}
+
+static int
 update(float dt)
 {
 	// handle events
@@ -284,12 +446,6 @@ update(float dt)
 				controls.play_animation = !controls.play_animation;
 				break;
 			}
-		} else if (evt.type == SDL_MOUSEBUTTONDOWN &&
-			   evt.button.x >= WIDTH - 40 &&
-			   evt.button.x <= WIDTH &&
-			   evt.button.y >= 2 &&
-		           evt.button.y <= 40) {
-			return 0;
 		}
 
 		int bit = 0;
@@ -317,9 +473,13 @@ update(float dt)
 		}
 
 		if (evt.type == SDL_MOUSEBUTTONDOWN) {
-			on_mouse_down(&evt.button);
+			if (!ui_handle_mouse(&evt.button)) {
+				on_mouse_down(&evt.button);
+			}
 		} else if (evt.type == SDL_MOUSEBUTTONUP) {
-			on_mouse_up(&evt.button);
+			if (!ui_handle_mouse(&evt.button)) {
+				on_mouse_up(&evt.button);
+			}
 		} else if (evt.type == SDL_MOUSEMOTION) {
 			on_mouse_move(&evt.motion);
 		}
@@ -381,11 +541,7 @@ load_resources(void)
 	    !(model_texture = texture_from_image(model_image, GL_TEXTURE_2D)) ||
 	    !(terrain_mesh = mesh_from_file("tests/data/plane.mesh")) ||
 	    !(terrain_image = image_from_file("tests/data/grass.jpg")) ||
-	    !(terrain_texture = texture_from_image(terrain_image, GL_TEXTURE_2D)) ||
-	    !(fps_font = font_from_file("tests/data/courier.ttf", 16)) ||
-	    !(fps_text = text_new(fps_font)) ||
-	    !(btn_image = image_from_file("tests/data/close_btn.png")) ||
-	    !(btn_texture = texture_from_image(btn_image, GL_TEXTURE_RECTANGLE))) {
+	    !(terrain_texture = texture_from_image(terrain_image, GL_TEXTURE_2D))) {
 		errf(ERR_GENERIC, "failed to load resources", 0);
 		return 0;
 	}
@@ -413,17 +569,113 @@ load_resources(void)
 	terrain_props.receive_shadows = 1;
 	terrain_props.material = &terrain_material;
 
-	// FPS counter text props
-	memset(&fps_props, 0, sizeof(struct TextProps));
-	fps_props.color = vec(0.5, 1.0, 0.5, 1.0);
-	fps_props.opacity = 1.0;
+	return 1;
+}
 
-	// close button quad props
-	memset(&btn_props, 0, sizeof(struct QuadProps));
-	btn_props.color = vec(1, 1, 1, 1);
-	btn_props.opacity = 1.0;
-	btn_props.texture = btn_texture;
+static int
+load_image_widget(struct Widget *w)
+{
+	// load the widget image
+	w->image.image = image_from_file(w->image.filename);
+	if (!w->image.image) {
+		return 0;
+	}
 
+	// create a rectangle texture from the loaded image
+	w->image.texture = texture_from_image(w->image.image, GL_TEXTURE_RECTANGLE);
+	if (!w->image.texture) {
+		return 0;
+	}
+
+	// initialize the corresponding quad and props objects
+	w->image.quad = malloc(sizeof(struct Quad));
+	w->image.quad->width = w->size[0] > 0 ? w->size[0] : w->image.image->width;
+	w->image.quad->height = w->size[1] > 0 ? w->size[1] : w->image.image->height;
+	w->image.props = malloc(sizeof(struct QuadProps));
+	w->image.props->texture = w->image.texture;
+	w->image.props->color = vec(1, 1, 1, 1);
+	w->image.props->opacity = 1.0;
+	w->image.props->borders.left = w->image.borders[0];
+	w->image.props->borders.top = w->image.borders[1];
+	w->image.props->borders.right = w->image.borders[2];
+	w->image.props->borders.bottom = w->image.borders[3];
+
+	return 1;
+}
+
+static int
+load_text_widget(struct Widget *w)
+{
+	// load the font
+	w->text.font = font_from_file(w->text.font_filename, w->text.font_size);
+	if (!w->text.font) {
+		return 0;
+	}
+
+	// create text
+	w->text.text = text_new(w->text.font);
+	if (!w->text.text) {
+		return 0;
+	}
+	text_set_string(w->text.text, w->text.label);
+
+	// create props
+	w->text.props = malloc(sizeof(struct TextProps));
+	if (!w->text.props) {
+		return 0;
+	}
+	w->text.props->color = vec(w->text.color[0], w->text.color[1], w->text.color[2], w->text.color[3]);
+	w->text.props->opacity = 1.0;
+
+	return 1;
+}
+
+static int
+load_ui(void)
+{
+	int (*loaders[])(struct Widget *w) = {
+		load_image_widget,
+		load_text_widget
+	};
+	for (unsigned i = 0; i < WIDGET_COUNT; i++) {
+		struct Widget *w = &widgets[i];
+		if (!loaders[w->type](w)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int
+setup_ui(void)
+{
+	// create the scene
+	if (!(ui_scene = scene_new())) {
+		return 0;
+	}
+
+	for (unsigned i = 0; i < WIDGET_COUNT; i++) {
+		struct Widget *w = &widgets[i];
+		switch (w->type) {
+		case IMAGE_WIDGET:
+			w->object = scene_add_quad(ui_scene, w->image.quad, w->image.props);
+			break;
+		case TEXT_WIDGET:
+			w->object = scene_add_text(ui_scene, w->text.text, w->text.props);
+		}
+
+		if (!w->object) {
+			return 0;
+		}
+
+		// set widget position
+		w->object->position = vec(
+			w->position[0] - WIDTH / 2,
+			HEIGHT / 2 - w->position[1],
+			w->position[2],
+			0
+		);
+	}
 	return 1;
 }
 
@@ -431,17 +683,12 @@ static int
 setup_scene(void)
 {
 	if (!(scene = scene_new()) ||
-	    !(ui_scene = scene_new()) ||
 	    !(model_object = scene_add_mesh(scene, model_mesh, &model_props)) ||
-	    !(terrain_object = scene_add_mesh(scene, terrain_mesh, &terrain_props)) ||
-	    !(fps_object = scene_add_text(ui_scene, fps_text, &fps_props)) ||
-	    !(btn_object = scene_add_quad(ui_scene, &btn_quad, &btn_props))) {
+	    !(terrain_object = scene_add_mesh(scene, terrain_mesh, &terrain_props))) {
 		return 0;
 	}
 
 	terrain_object->scale = vec(2, 2, 2, 0);
-	fps_object->position = vec(-WIDTH / 2 + 10, HEIGHT / 2 - 10, 0, 0);
-	btn_object->position = vec(WIDTH / 2 - 40, HEIGHT / 2 - 2, 0, 0);
 
 	return 1;
 }
@@ -449,10 +696,21 @@ setup_scene(void)
 static void
 cleanup_resources(void)
 {
-	texture_free(btn_texture);
-	image_free(btn_image);
-	text_free(fps_text);
-	font_free(fps_font);
+	for (unsigned i = 0; i < WIDGET_COUNT; i++) {
+		struct Widget *w = &widgets[i];
+		switch (w->type) {
+		case IMAGE_WIDGET:
+			free(w->image.props);
+			free(w->image.quad);
+			texture_free(w->image.texture);
+			image_free(w->image.image);
+			break;
+		case TEXT_WIDGET:
+			free(w->text.props);
+			text_free(w->text.text);
+			font_free(w->text.font);
+		}
+	}
 	texture_free(terrain_texture);
 	image_free(terrain_image);
 	mesh_free(terrain_mesh);
@@ -467,14 +725,23 @@ cleanup_resources(void)
 static void
 update_stats(int fps, float render_time)
 {
-	render_time *= 1000.f; // in milliseconds
-	const char *fmt = "FPS: %d, render time: %.2fms";
-	int len = snprintf(NULL, 0, fmt, fps, render_time) + 1;
-	char str[len + 1];
-	str[len] = '\0'; // NUL-terminator
-	snprintf(str, len, fmt, fps, render_time);
-	SDL_SetWindowTitle(window, str);
-	text_set_string(fps_text, str);
+	{
+		const char *fmt = "FPS: %d";
+		int len = snprintf(NULL, 0, fmt, fps) + 1;
+		char str[len + 1];
+		str[len] = '\0'; // NUL-terminator
+		snprintf(str, len, fmt, fps);
+		text_set_string(WIDGET_FPS_COUNTER->text.text, str);
+	}
+	{
+		render_time *= 1000.f; // in milliseconds
+		const char *fmt = "Frame: %.2fms";
+		int len = snprintf(NULL, 0, fmt, render_time) + 1;
+		char str[len + 1];
+		str[len] = '\0'; // NUL-terminator
+		snprintf(str, len, fmt, render_time);
+		text_set_string(WIDGET_FRAME_TIME->text.text, str);
+	}
 }
 
 static struct timespec
@@ -501,7 +768,9 @@ main(int argc, char *argv[])
 	int ok = (
 		init(WIDTH, HEIGHT) &&
 		load_resources() &&
-		setup_scene()
+		load_ui() &&
+		setup_scene() &&
+		setup_ui()
 	);
 
 	int run = 1;
@@ -526,6 +795,7 @@ main(int argc, char *argv[])
 		}
 
 		// update the scene
+		run &= ui_update();
 		run &= update(dt);
 
 		// render and measure rendering time
