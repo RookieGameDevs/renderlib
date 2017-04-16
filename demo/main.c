@@ -406,7 +406,7 @@ ui_handle_mouse(SDL_MouseButtonEvent *evt)
 		float y0 = w->position[1];
 		float x1 = x0 + w->size[0];
 		float y1 = y0 + w->size[1];
-		if (evt->x >= x0 && evt->y <= x1 &&
+		if (evt->x >= x0 && evt->x <= x1 &&
 		    evt->y >= y0 && evt->y <= y1) {
 			target = w;
 			break;
