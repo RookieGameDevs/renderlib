@@ -62,7 +62,7 @@ START_TEST(test_render)
 	struct Object *obj = scene_add_mesh(scene, mesh, &props);
 	ck_assert(obj);
 
-	int ok = scene_render(scene, &camera, &light);
+	int ok = scene_render(scene, RENDER_TARGET_FRAMEBUFFER, &camera, &light);
 	ck_assert(ok);
 
 	scene_free(scene);

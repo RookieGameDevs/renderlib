@@ -23,7 +23,7 @@ START_TEST(test_render_mesh_simple)
 		.material = NULL
 	};
 
-	ck_assert(render_mesh(mesh, &props, &transform, NULL, NULL));
+	ck_assert(render_mesh(RENDER_TARGET_FRAMEBUFFER, mesh, &props, &transform, NULL, NULL));
 	ck_assert(renderer_present());
 }
 END_TEST
@@ -55,7 +55,7 @@ START_TEST(test_render_mesh_textured)
 		.animation = NULL,
 		.material = &mat
 	};
-	ck_assert(render_mesh(mesh, &props, &transform, NULL, NULL));
+	ck_assert(render_mesh(RENDER_TARGET_FRAMEBUFFER, mesh, &props, &transform, NULL, NULL));
 	ck_assert(renderer_present());
 }
 END_TEST
@@ -84,7 +84,7 @@ START_TEST(test_render_mesh_shadowed)
 		.material = NULL
 	};
 
-	ck_assert(render_mesh(mesh, &props, &transform, &light, &eye));
+	ck_assert(render_mesh(RENDER_TARGET_FRAMEBUFFER, mesh, &props, &transform, &light, &eye));
 	ck_assert(renderer_present());
 }
 END_TEST
@@ -113,7 +113,7 @@ START_TEST(test_render_mesh_animated)
 		.material = NULL
 	};
 
-	ck_assert(render_mesh(mesh, &props, &transform, NULL, NULL));
+	ck_assert(render_mesh(RENDER_TARGET_FRAMEBUFFER, mesh, &props, &transform, NULL, NULL));
 	ck_assert(renderer_present());
 }
 END_TEST

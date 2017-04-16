@@ -38,7 +38,12 @@ size_t
 scene_object_count(struct Scene *scene);
 
 int
-scene_render(struct Scene *scene, struct Camera *camera, struct Light *light);
+scene_render(
+	struct Scene *scene,
+	int render_target,
+	struct Camera *camera,
+	struct Light *light
+);
 
 void
 scene_free(struct Scene *scene);

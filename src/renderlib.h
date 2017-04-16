@@ -73,6 +73,11 @@ struct QuadProps {
 	float opacity;                // opacity; 0 = transparent, 1 = opaque
 };
 
+enum {
+	RENDER_TARGET_FRAMEBUFFER,
+	RENDER_TARGET_OVERLAY
+};
+
 /**
  * Initialize renderer library.
  */
@@ -102,6 +107,7 @@ renderer_shutdown(void);
  */
 int
 render_mesh(
+	int render_target,
 	struct Mesh *mesh,
 	struct MeshProps *props,
 	struct Transform *t,
@@ -113,10 +119,20 @@ render_mesh(
  * Render text.
  */
 int
-render_text(struct Text *text, struct TextProps *props, struct Transform *t);
+render_text(
+	int render_target,
+	struct Text *text,
+	struct TextProps *props,
+	struct Transform *t
+);
 
 /**
  * Render a colored/textured quad.
  */
 int
-render_quad(struct Quad *quad, struct QuadProps *props, struct Transform *t);
+render_quad(
+	int render_target,
+	struct Quad *quad,
+	struct QuadProps *props,
+	struct Transform *t
+);

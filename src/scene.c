@@ -26,7 +26,8 @@ typedef int (*RenderFunc)(
 	const struct Object*,
 	const struct ObjectInfo*,
 	struct Camera*,
-	struct Light*
+	struct Light*,
+	int
 );
 
 inline static Mat
@@ -45,7 +46,8 @@ draw_mesh_object(
 	const struct Object *object,
 	const struct ObjectInfo *info,
 	struct Camera *camera,
-	struct Light *light
+	struct Light *light,
+	int render_target
 ) {
 	struct Mesh *mesh = info->ptr;
 	struct Transform t;
@@ -53,7 +55,14 @@ draw_mesh_object(
 	mat_mul(&object_matrix, &mesh->transform, &t.model);
 	camera_get_matrices(camera, &t.view, &t.projection);
 
-	return render_mesh(mesh, info->props, &t, light, &camera->position);
+	return render_mesh(
+		render_target,
+		mesh,
+		info->props,
+		&t,
+		light,
+		&camera->position
+	);
 }
 
 static int
@@ -61,13 +70,14 @@ draw_text_object(
 	const struct Object *object,
 	const struct ObjectInfo *info,
 	struct Camera *camera,
-	struct Light *light
+	struct Light *light,
+	int render_target
 ) {
 	struct Transform t = {
 		.model = compute_object_matrix(object),
 	};
 	camera_get_matrices(camera, &t.view, &t.projection);
-	return render_text(info->ptr, info->props, &t);
+	return render_text(render_target, info->ptr, info->props, &t);
 }
 
 static int
@@ -75,13 +85,14 @@ draw_quad_object(
 	const struct Object *object,
 	const struct ObjectInfo *info,
 	struct Camera *camera,
-	struct Light *light
+	struct Light *light,
+	int render_target
 ) {
 	struct Transform t = {
 		.model = compute_object_matrix(object),
 	};
 	camera_get_matrices(camera, &t.view, &t.projection);
-	return render_quad(info->ptr, info->props, &t);
+	return render_quad(render_target, info->ptr, info->props, &t);
 }
 
 static RenderFunc renderers[] = {
@@ -190,8 +201,12 @@ scene_free(struct Scene *scene)
 }
 
 int
-scene_render(struct Scene *scene, struct Camera *camera, struct Light *light)
-{
+scene_render(
+	struct Scene *scene,
+	int render_target,
+	struct Camera *camera,
+	struct Light *light
+) {
 	const struct Object *obj = NULL;
 	struct ObjectInfo *info = NULL;
 
@@ -203,7 +218,7 @@ scene_render(struct Scene *scene, struct Camera *camera, struct Light *light)
 	}
 
 	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
-		if (!renderers[info->type](obj, info, camera, light)) {
+		if (!renderers[info->type](obj, info, camera, light, render_target)) {
 			return 0;
 		}
 	}

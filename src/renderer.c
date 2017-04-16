@@ -2,6 +2,7 @@
 #include "shadow_map.h"
 #include <GL/glew.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #define RENDER_QUEUE_SIZE 1000
 
@@ -46,12 +47,20 @@ int
 draw_quad(struct Quad *quad, struct QuadProps *props, struct Transform *transform);
 
 enum {
+	MESH_OP = 1,
+	TEXT_OP,
+	QUAD_OP
+};
+
+enum {
 	SHADOW_PASS = 1,
-	RENDER_PASS
+	RENDER_PASS,
 };
 
 struct RenderOp {
 	int pass;
+	int type;
+	Vec position;
 	struct Transform transform;
 	union {
 		struct {
@@ -76,7 +85,7 @@ struct RenderOp {
 static struct RenderQueue {
 	struct RenderOp queue[RENDER_QUEUE_SIZE];
 	size_t len;
-} shadow_queue = { .len = 0 }, render_queue = { .len = 0 };
+} shadow_queue = { .len = 0 }, render_queue = { .len = 0 }, overlay_queue = { .len = 0 };
 
 static struct ShadowMap *shadow_map = NULL;
 static int shadow_map_tu = -1;
@@ -138,9 +147,57 @@ exec_quad_op(struct RenderOp *op)
 }
 
 static int
+render_op_cmp(const void *ptr1, const void *ptr2)
+{
+	const struct RenderOp *op1 = ptr1, *op2 = ptr2;
+
+	// meshes come first as they are non-transparent non-translucent opaque
+	// objects by definition
+	if (op1->type == MESH_OP && op2->type == MESH_OP) {
+		if (op1->mesh.mesh < op2->mesh.mesh) {
+			return -1;
+		} else if (op1->mesh.mesh == op2->mesh.mesh) {
+			return 0;
+		}
+		return 1;
+	} else if (op1->type == MESH_OP) {
+		return -1;
+	} else if (op2->type == MESH_OP) {
+		return 1;
+	}
+
+	// TODO: this is a simple Z-based sort, which works only for text and
+	// quads which are rendered using a non-rotated orthographic projection
+	// volume
+	if (op1->position.data[2] < op2->position.data[2]) {
+		return -1;
+	} else if (fabs(op1->position.data[2] - op2->position.data[2]) < 1e-6) {
+		return 0;
+	}
+	return 1;
+}
+
+static int
 render_queue_exec(struct RenderQueue *q)
 {
 	int ok = 1;
+
+	// compute op target position in world coordinates
+	Mat modelview;
+	Vec origin = vec(0, 0, 0, 1);
+	for (size_t i = 0; i < q->len; i++) {
+		mat_mul(
+			&q->queue[i].transform.view,
+			&q->queue[i].transform.model,
+			&modelview
+		);
+		mat_mulv(&modelview, &origin, &q->queue[i].position);
+	}
+
+	// sort operations in render queue as specified by `render_op_cmp()`
+	qsort(q->queue, q->len, sizeof(struct RenderOp), render_op_cmp);
+
+	// execute render operations
 	for (int i = 0; i < q->len; i++) {
 		struct RenderOp *op = &q->queue[i];
 		ok &= op->exec(op);
@@ -226,9 +283,20 @@ renderer_present(void)
 		goto cleanup;
 	}
 
+	// overlay pass
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);
+	ok = render_queue_exec(&overlay_queue);
+	glEnable(GL_DEPTH_TEST);
+	if (!ok) {
+		errf(ERR_GENERIC, "overlay pass failed");
+		goto cleanup;
+	}
+
 cleanup:
 	render_queue_flush(&shadow_queue);
 	render_queue_flush(&render_queue);
+	render_queue_flush(&overlay_queue);
 
 	return ok;
 }
@@ -242,6 +310,7 @@ renderer_shutdown(void)
 
 int
 render_mesh(
+	int render_target,
 	struct Mesh *mesh,
 	struct MeshProps *props,
 	struct Transform *t,
@@ -255,6 +324,7 @@ render_mesh(
 	int ok = 1;
 
 	struct RenderOp op = {
+		.type = MESH_OP,
 		.transform = *t,
 		.mesh = {
 			.mesh = mesh,
@@ -265,7 +335,7 @@ render_mesh(
 
 	// enable lighting and shadow casting only if light parameters are
 	// specified
-	if (light && eye) {
+	if (light && eye && render_target == RENDER_TARGET_FRAMEBUFFER) {
 		op.mesh.is_lit = 1;
 		op.mesh.light = *light;
 		op.mesh.eye = *eye;
@@ -279,15 +349,24 @@ render_mesh(
 
 	// render pass
 	op.pass = RENDER_PASS;
-	ok &= render_queue_push(&render_queue, &op);
+	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
+		ok &= render_queue_push(&render_queue, &op);
+	} else {
+		ok &= render_queue_push(&overlay_queue, &op);
+	}
 
 	return ok;
 }
 
 int
-render_text(struct Text *text, struct TextProps *props, struct Transform *t)
-{
+render_text(
+	int render_target,
+	struct Text *text,
+	struct TextProps *props,
+	struct Transform *t
+) {
 	struct RenderOp op = {
+		.type = TEXT_OP,
 		.transform = *t,
 		.pass = RENDER_PASS,
 		.text = {
@@ -296,13 +375,21 @@ render_text(struct Text *text, struct TextProps *props, struct Transform *t)
 		},
 		.exec = exec_text_op
 	};
-	return render_queue_push(&render_queue, &op);
+	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
+		return render_queue_push(&render_queue, &op);
+	}
+	return render_queue_push(&overlay_queue, &op);
 }
 
 int
-render_quad(struct Quad *quad, struct QuadProps *props, struct Transform *t)
-{
+render_quad(
+	int render_target,
+	struct Quad *quad,
+	struct QuadProps *props,
+	struct Transform *t
+) {
 	struct RenderOp op = {
+		.type = QUAD_OP,
 		.transform = *t,
 		.pass = RENDER_PASS,
 		.quad = {
@@ -311,5 +398,8 @@ render_quad(struct Quad *quad, struct QuadProps *props, struct Transform *t)
 		},
 		.exec = exec_quad_op
 	};
-	return render_queue_push(&render_queue, &op);
+	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
+		return render_queue_push(&render_queue, &op);
+	}
+	return render_queue_push(&overlay_queue, &op);
 }

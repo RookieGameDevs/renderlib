@@ -362,8 +362,8 @@ render(void)
 	renderer_clear();
 
 	int ok = (
-		scene_render(scene, &camera, &light) &&
-		scene_render(ui_scene, &ui_camera, NULL) &&
+		scene_render(scene, RENDER_TARGET_FRAMEBUFFER, &camera, &light) &&
+		scene_render(ui_scene, RENDER_TARGET_OVERLAY, &ui_camera, NULL) &&
 		renderer_present()
 	);
 
