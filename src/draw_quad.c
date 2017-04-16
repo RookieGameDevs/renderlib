@@ -113,18 +113,18 @@ draw_quad(struct Quad *quad, struct QuadProps *props, struct Transform *transfor
 	}
 
 	Vec size = vec(quad->width, quad->height, 0, 0);
-	Vec borders = vec(
+	Vec border = vec(
 		props->borders.left,
 		props->borders.right,
-		props->borders.top,
-		props->borders.bottom
+		props->borders.bottom,
+		props->borders.top
 	);
 
 	int configured = (
 		shader_bind(shader) &&
 		shader_uniform_set(&u_mvp, 1, &mvp) &&
 		shader_uniform_set(&u_size, 1, &size) &&
-		shader_uniform_set(&u_border, 1, &borders) &&
+		shader_uniform_set(&u_border, 1, &border) &&
 		shader_uniform_set(&u_color, 1, &props->color) &&
 		shader_uniform_set(&u_opacity, 1, &props->opacity) &&
 		shader_uniform_set(&u_enable_texture_mapping, 1, &enable_texture_mapping) &&

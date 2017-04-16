@@ -15,7 +15,7 @@ clamp_coord(float v, float size, float texture_size, uint lo, uint hi)
 {
 	if (v > lo) {
 		if (v >= size - hi) {
-			v -= (size - hi);
+			v -= size - hi;
 			v += texture_size - hi;
 		} else {
 			v -= lo;
@@ -28,13 +28,13 @@ clamp_coord(float v, float size, float texture_size, uint lo, uint hi)
 void
 main()
 {
-	ivec2 texture_size = textureSize(texture_sampler);
-	vec2 norm_uv = vec2(
-		clamp_coord(uv.x, size.x, texture_size.x, border.r, border.g),
-		clamp_coord(uv.y, size.y, texture_size.y, border.b, border.a)
-	);
 	out_color = color;
 	if (enable_texture_mapping) {
+		ivec2 texture_size = textureSize(texture_sampler);
+		vec2 norm_uv = vec2(
+			clamp_coord(uv.x, size.x, texture_size.x, border.r, border.g),
+			clamp_coord(size.y - uv.y, size.y, texture_size.y, border.b, border.a)
+		);
 		out_color *= texture(texture_sampler, norm_uv);
 	}
 	out_color *= opacity;
