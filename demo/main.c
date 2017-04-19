@@ -42,6 +42,12 @@ static struct Light light;
 static struct Scene *scene = NULL;
 static struct Scene *ui_scene = NULL;
 
+#define OBJECT_ROWS 10
+#define OBJECT_COLUMNS 10
+#define ROW_SPACING 0.5
+#define COLUMN_SPACING 0.5
+#define OBJECT_COUNT (OBJECT_ROWS * OBJECT_COLUMNS)
+
 // main model
 static struct Mesh *model_mesh = NULL;
 static struct AnimationInstance *model_animation = NULL;
@@ -49,7 +55,7 @@ static struct Image *model_image = NULL;
 static struct Texture *model_texture = NULL;
 static struct Material model_material;
 static struct MeshProps model_props;
-static struct Object *model_object = NULL;
+static struct Object *objects[OBJECT_COUNT] = {NULL};
 
 // terrain model
 static struct Mesh *terrain_mesh = NULL;
@@ -683,9 +689,29 @@ static int
 setup_scene(void)
 {
 	if (!(scene = scene_new()) ||
-	    !(model_object = scene_add_mesh(scene, model_mesh, &model_props)) ||
 	    !(terrain_object = scene_add_mesh(scene, terrain_mesh, &terrain_props))) {
 		return 0;
+	}
+
+	for (size_t r = 0; r < OBJECT_ROWS; r++) {
+		for (size_t c = 0; c < OBJECT_COLUMNS; c++) {
+			struct Object *obj = scene_add_mesh(
+				scene,
+				model_mesh,
+				&model_props
+			);
+			if (!obj) {
+				return 0;
+			}
+
+			obj->position = vec(
+				(c % 2 ? -1 : 1) * c * COLUMN_SPACING,
+				0,
+				(r % 2 ? -1 : 1) * r * ROW_SPACING,
+				1
+			);
+			objects[r * OBJECT_ROWS + c] = obj;
+		}
 	}
 
 	terrain_object->scale = vec(2, 2, 2, 0);
