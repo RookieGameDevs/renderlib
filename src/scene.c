@@ -16,95 +16,10 @@ enum {
 	OBJECT_TYPE_QUAD
 };
 
-struct RenderContext {
-	struct Camera *camera;
-	struct Light *light;
-	int render_target;
-	Mat view;
-	Mat projection;
-};
-
 struct ObjectInfo {
 	int type;
 	void *ptr;
 	void *props;
-};
-
-typedef int (*RenderFunc)(
-	const struct Object*,
-	const struct ObjectInfo*,
-	const struct RenderContext*
-);
-
-inline static Mat
-compute_object_matrix(const struct Object *object)
-{
-	Mat m;
-	mat_ident(&m);
-	mat_translatev(&m, &object->position);
-	mat_rotateq(&m, &object->rotation);
-	mat_scalev(&m, &object->scale);
-	return m;
-}
-
-static int
-draw_mesh_object(
-	const struct Object *object,
-	const struct ObjectInfo *info,
-	const struct RenderContext *ctx
-) {
-	struct Mesh *mesh = info->ptr;
-	struct Transform t;
-	Mat object_matrix = compute_object_matrix(object);
-	mat_mul(&object_matrix, &mesh->transform, &t.model);
-	t.view = ctx->view;
-	t.projection = ctx->projection;
-
-	return render_mesh(
-		ctx->render_target,
-		mesh,
-		info->props,
-		&t,
-		ctx->light,
-		&ctx->camera->position
-	);
-}
-
-static int
-draw_text_object(
-	const struct Object *object,
-	const struct ObjectInfo *info,
-	const struct RenderContext *ctx
-) {
-	struct Transform t = {
-		.model = compute_object_matrix(object),
-		.view = ctx->view,
-		.projection = ctx->projection
-	};
-	return render_text(ctx->render_target, info->ptr, info->props, &t);
-}
-
-static int
-draw_quad_object(
-	const struct Object *object,
-	const struct ObjectInfo *info,
-	const struct RenderContext *ctx
-) {
-	struct Transform t = {
-		.model = compute_object_matrix(object),
-		.view = ctx->view,
-		.projection = ctx->projection
-	};
-	return render_quad(ctx->render_target, info->ptr, info->props, &t);
-}
-
-static RenderFunc renderers[] = {
-	// OBJECT_TYPE_MESH
-	draw_mesh_object,
-	// OBJECT_TYPE_TEXT
-	draw_text_object,
-	// OBJECT_TYPE_QUAD
-	draw_quad_object
 };
 
 struct Scene*
@@ -211,27 +126,74 @@ scene_render(
 	struct Camera *camera,
 	struct Light *light
 ) {
-	const struct Object *obj = NULL;
-	struct ObjectInfo *info = NULL;
-	struct RenderContext ctx = {
-		.camera = camera,
-		.light = light,
-		.render_target = render_target,
-	};
-	camera_get_matrices(camera, &ctx.view, &ctx.projection);
-
-	struct HashTableIter iter;
-	hash_table_iter_init(scene->objects, &iter);
-
+	// update light projection volume
 	if (light) {
 		light_update_projection(light, camera);
 	}
 
+	// setup object-independent transform matrices (view and projection)
+	struct Transform transform;
+	camera_get_matrices(camera, &transform.view, &transform.projection);
+	Mat world_matrix;
+
+	// traverse the scene by iterating the objects' hash table and render
+	// each one using related rendering function
+	const struct Object *obj = NULL;
+	struct ObjectInfo *info = NULL;
+	struct HashTableIter iter;
+	hash_table_iter_init(scene->objects, &iter);
 	while (hash_table_iter_next(&iter, (const void**)&obj, (void**)&info)) {
+		// skip invisible objects
 		if (!obj->visible) {
 			continue;
 		}
-		if (!renderers[info->type](obj, info, &ctx)) {
+
+		// compute object's own global (world) transformation matrix
+		mat_ident(&world_matrix);
+		mat_translatev(&world_matrix, &obj->position);
+		mat_rotateq(&world_matrix, &obj->rotation);
+		mat_scalev(&world_matrix, &obj->scale);
+
+		int ok = 1;
+
+		switch (info->type) {
+		case OBJECT_TYPE_MESH:
+			// apply mesh intrinsic transform to model matrix
+			mat_mul(
+				&world_matrix,
+				&((struct Mesh*)info->ptr)->transform,
+				&transform.model
+			);
+			ok = render_mesh(
+				render_target,
+				info->ptr,
+				info->props,
+				&transform,
+				light,
+				&camera->position
+			);
+			break;
+
+		case OBJECT_TYPE_TEXT:
+			transform.model = world_matrix;
+			ok = render_text(
+				render_target,
+				info->ptr,
+				info->props,
+				&transform
+			);
+			break;
+
+		case OBJECT_TYPE_QUAD:
+			transform.model = world_matrix;
+			ok = render_quad(
+				render_target,
+				info->ptr,
+				info->props,
+				&transform
+			);
+		}
+		if (!ok) {
 			return 0;
 		}
 	}
