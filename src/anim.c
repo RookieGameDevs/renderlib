@@ -130,10 +130,8 @@ animation_instance_new(struct Animation *anim)
 	size_t n_joints = anim->skeleton->joint_count;
 	inst->joint_transforms = malloc(sizeof(Mat) * n_joints);
 	inst->skin_transforms = malloc(sizeof(Mat) * n_joints);
-	inst->processed_joints = malloc(sizeof(bool) * n_joints);
 	if (inst->joint_transforms == NULL ||
-	    inst->skin_transforms == NULL ||
-	    inst->processed_joints == NULL) {
+	    inst->skin_transforms == NULL) {
 		err(ERR_NO_MEM);
 		animation_instance_free(inst);
 	}
@@ -152,7 +150,6 @@ animation_instance_free(struct AnimationInstance *inst)
 	if (inst) {
 		free(inst->joint_transforms);
 		free(inst->skin_transforms);
-		free(inst->processed_joints);
 		free(inst);
 	}
 }
@@ -164,7 +161,8 @@ animation_instance_play(struct AnimationInstance *inst, float dt)
 	int n_joints = anim->skeleton->joint_count;
 
 	// reset joint processing flags
-	memset(inst->processed_joints, 0, sizeof(bool) * n_joints);
+	bool processed_joints[n_joints];
+	memset(processed_joints, 0, sizeof(bool) * n_joints);
 
 	// compute the relative animation time in ticks, which default to 25
 	// frames (ticks) per second
@@ -188,8 +186,10 @@ animation_instance_play(struct AnimationInstance *inst, float dt)
 	// the process is iterative and keeps track of which joints have already
 	// their transformations computed, in order to re-use them and skip
 	// their processing
+	Mat tmp;
 	for (int j = 0; j < n_joints; j++) {
-		if (!inst->processed_joints[j]) {
+		// compute joint pose transform
+		if (!processed_joints[j]) {
 			joint_compute_pose(
 				anim,                   // animation
 				sp0,                    // pose before t
@@ -197,9 +197,17 @@ animation_instance_play(struct AnimationInstance *inst, float dt)
 				j,                      // joint index
 				pose_time,              // exact pose time
 				inst->joint_transforms, // output transforms array
-				inst->processed_joints  // joint processing status array
+				processed_joints        // joint processing status array
 			);
 		}
+
+		// compute final skin transform for given joint
+		mat_mul(
+			&inst->joint_transforms[j],
+			&inst->anim->skeleton->joints[j].inv_bind_pose,
+			&tmp
+		);
+		mat_transpose(&tmp, &inst->skin_transforms[j]);
 	}
 
 	return 1;

@@ -2,6 +2,7 @@
 #include "error.h"
 #include "shader.h"
 #include <GL/glew.h>
+#include <string.h>
 
 /**
  * Updates uniform buffer with skinning transform data for given animation
@@ -31,8 +32,7 @@ update_skin_transforms_buffer(
 	// bind the buffer to uniform target and map its memory to client
 	// address space
 	glBindBuffer(GL_UNIFORM_BUFFER, buffer);
-	struct Animation *anim = inst->anim;
-	Mat *dst = glMapBufferRange(
+	void *dst = glMapBufferRange(
 		GL_UNIFORM_BUFFER,
 		offset,
 		size,
@@ -44,16 +44,8 @@ update_skin_transforms_buffer(
 		return 0;
 	}
 
-	// compute final skinning transforms and store them in the buffer
-	Mat tmp;
-	for (int j = 0; j < anim->skeleton->joint_count; j++) {
-		mat_mul(
-			&inst->joint_transforms[j],
-			&anim->skeleton->joints[j].inv_bind_pose,
-			&tmp
-		);
-		mat_transpose(&tmp, &dst[j]);
-	}
+	// update the buffer with skin transforms data
+	memcpy(dst, inst->skin_transforms, size);
 
 	// unmap the buffer
 	glUnmapBuffer(GL_UNIFORM_BUFFER);

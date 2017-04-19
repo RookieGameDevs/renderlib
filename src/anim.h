@@ -59,7 +59,6 @@ struct AnimationInstance {
 	float time;              // local clock
 	Mat *joint_transforms;   // local joint transformations
 	Mat *skin_transforms;    // final skinning transformations
-	bool *processed_joints;  // joint processing flags (private)
 };
 
 /**
