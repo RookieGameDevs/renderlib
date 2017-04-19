@@ -16,6 +16,14 @@ enum {
 	OBJECT_TYPE_QUAD
 };
 
+struct RenderContext {
+	struct Camera *camera;
+	struct Light *light;
+	int render_target;
+	Mat view;
+	Mat projection;
+};
+
 struct ObjectInfo {
 	int type;
 	void *ptr;
@@ -25,9 +33,7 @@ struct ObjectInfo {
 typedef int (*RenderFunc)(
 	const struct Object*,
 	const struct ObjectInfo*,
-	struct Camera*,
-	struct Light*,
-	int
+	const struct RenderContext*
 );
 
 inline static Mat
@@ -45,23 +51,22 @@ static int
 draw_mesh_object(
 	const struct Object *object,
 	const struct ObjectInfo *info,
-	struct Camera *camera,
-	struct Light *light,
-	int render_target
+	const struct RenderContext *ctx
 ) {
 	struct Mesh *mesh = info->ptr;
 	struct Transform t;
 	Mat object_matrix = compute_object_matrix(object);
 	mat_mul(&object_matrix, &mesh->transform, &t.model);
-	camera_get_matrices(camera, &t.view, &t.projection);
+	t.view = ctx->view;
+	t.projection = ctx->projection;
 
 	return render_mesh(
-		render_target,
+		ctx->render_target,
 		mesh,
 		info->props,
 		&t,
-		light,
-		&camera->position
+		ctx->light,
+		&ctx->camera->position
 	);
 }
 
@@ -69,30 +74,28 @@ static int
 draw_text_object(
 	const struct Object *object,
 	const struct ObjectInfo *info,
-	struct Camera *camera,
-	struct Light *light,
-	int render_target
+	const struct RenderContext *ctx
 ) {
 	struct Transform t = {
 		.model = compute_object_matrix(object),
+		.view = ctx->view,
+		.projection = ctx->projection
 	};
-	camera_get_matrices(camera, &t.view, &t.projection);
-	return render_text(render_target, info->ptr, info->props, &t);
+	return render_text(ctx->render_target, info->ptr, info->props, &t);
 }
 
 static int
 draw_quad_object(
 	const struct Object *object,
 	const struct ObjectInfo *info,
-	struct Camera *camera,
-	struct Light *light,
-	int render_target
+	const struct RenderContext *ctx
 ) {
 	struct Transform t = {
 		.model = compute_object_matrix(object),
+		.view = ctx->view,
+		.projection = ctx->projection
 	};
-	camera_get_matrices(camera, &t.view, &t.projection);
-	return render_quad(render_target, info->ptr, info->props, &t);
+	return render_quad(ctx->render_target, info->ptr, info->props, &t);
 }
 
 static RenderFunc renderers[] = {
@@ -210,6 +213,12 @@ scene_render(
 ) {
 	const struct Object *obj = NULL;
 	struct ObjectInfo *info = NULL;
+	struct RenderContext ctx = {
+		.camera = camera,
+		.light = light,
+		.render_target = render_target,
+	};
+	camera_get_matrices(camera, &ctx.view, &ctx.projection);
 
 	struct HashTableIter iter;
 	hash_table_iter_init(scene->objects, &iter);
@@ -222,7 +231,7 @@ scene_render(
 		if (!obj->visible) {
 			continue;
 		}
-		if (!renderers[info->type](obj, info, camera, light, render_target)) {
+		if (!renderers[info->type](obj, info, &ctx)) {
 			return 0;
 		}
 	}
