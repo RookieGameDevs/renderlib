@@ -59,3 +59,9 @@ text_pass_exit(void)
 	// TODO
 	return 0;
 }
+
+struct Shader*
+text_pass_get_shader(void)
+{
+	return shader;
+}

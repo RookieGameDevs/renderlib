@@ -1,8 +1,8 @@
 #version 330 core
 
-in vec3 position;
-in vec3 normal;
-in vec2 uv;
+in vec3 vert_position;
+in vec3 vert_normal;
+in vec2 vert_uv;
 
 out vec4 color;
 
@@ -82,11 +82,11 @@ void main()
 	color = material.color;
 
 	if (enable_texture_mapping) {
-		color = texture(texture_map_sampler, vec2(uv.x, 1 - uv.y));
+		color = texture(texture_map_sampler, vec2(vert_uv.x, 1 - vert_uv.y));
 	}
 
 	if (enable_lighting) {
-		apply_lighting(color, light, material, eye, position, normal);
+		apply_lighting(color, light, material, eye, vert_position, vert_normal);
 	}
 
 	if (enable_shadow_mapping) {

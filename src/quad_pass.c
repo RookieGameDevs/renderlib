@@ -59,3 +59,9 @@ quad_pass_exit(void)
 	// TODO
 	return 0;
 }
+
+struct Shader*
+quad_pass_get_shader(void)
+{
+	return shader;
+}

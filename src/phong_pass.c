@@ -2,11 +2,11 @@
 #include "shader.h"
 
 static const char *vertex_shader = (
-# include "mesh.vert.h"
+# include "phong.vert.h"
 );
 
 static const char *fragment_shader = (
-# include "mesh.frag.h"
+# include "phong.frag.h"
 );
 
 static struct Shader *shader = NULL;
@@ -58,4 +58,11 @@ phong_pass_exit(void)
 {
 	// TODO
 	return 0;
+}
+
+
+struct Shader*
+phong_pass_get_shader(void)
+{
+	return shader;
 }

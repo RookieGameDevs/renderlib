@@ -53,8 +53,8 @@ enum {
 };
 
 enum {
-	SHADOW_PASS = 1,
-	RENDER_PASS,
+	PASS_SHADOW = 1,
+	PASS_RENDER,
 };
 
 struct RenderOp {
@@ -95,6 +95,9 @@ shadow_pass_enter(void);
 extern int
 shadow_pass_exit(void);
 
+extern struct Shader*
+shadow_pass_get_shader(void);
+
 /** Text pass functions **/
 extern int
 text_pass_init(void);
@@ -107,6 +110,9 @@ text_pass_enter(void);
 
 extern int
 text_pass_exit(void);
+
+extern struct Shader*
+text_pass_get_shader(void);
 
 /** Quad pass functions **/
 extern int
@@ -121,6 +127,9 @@ quad_pass_enter(void);
 extern int
 quad_pass_exit(void);
 
+extern struct Shader*
+quad_pass_get_shader(void);
+
 /** Phong pass functions **/
 extern int
 phong_pass_init(void);
@@ -133,6 +142,9 @@ phong_pass_enter(void);
 
 extern int
 phong_pass_exit(void);
+
+extern struct Shader*
+phong_pass_get_shader(void);
 
 static struct RenderPass {
 	const char *name;
@@ -148,34 +160,41 @@ static struct RenderPass {
 
 	int
 	(*exit)(void);
+
+	struct Shader*
+	(*get_shader)(void);
 } passes[] = {
 	{
 		"shadow",
 		shadow_pass_init,
 		shadow_pass_cleanup,
 		shadow_pass_enter,
-		shadow_pass_exit
+		shadow_pass_exit,
+		shadow_pass_get_shader
 	},
 	{
 		"text",
 		text_pass_init,
 		text_pass_cleanup,
 		text_pass_enter,
-		text_pass_exit
+		text_pass_exit,
+		text_pass_get_shader
 	},
 	{
 		"quad",
 		quad_pass_init,
 		quad_pass_cleanup,
 		quad_pass_enter,
-		quad_pass_exit
+		quad_pass_exit,
+		quad_pass_get_shader
 	},
 	{
 		"phong",
 		phong_pass_init,
 		phong_pass_cleanup,
 		phong_pass_enter,
-		phong_pass_exit
+		phong_pass_exit,
+		phong_pass_get_shader
 	}
 };
 
@@ -211,7 +230,7 @@ exec_mesh_op(struct RenderOp *op)
 {
 	int ok = 1;
 	switch (op->pass) {
-	case SHADOW_PASS:
+	case PASS_SHADOW:
 		ok &= draw_mesh_shadow(
 			op->mesh.mesh,
 			&op->mesh.props,
@@ -219,7 +238,7 @@ exec_mesh_op(struct RenderOp *op)
 			&op->mesh.light
 		);
 		break;
-	case RENDER_PASS:
+	case PASS_RENDER:
 		ok &= draw_mesh(
 			op->mesh.mesh,
 			&op->mesh.props,
@@ -456,13 +475,13 @@ render_mesh(
 
 		// shadow pass
 		if (props->cast_shadows) {
-			op.pass = SHADOW_PASS;
+			op.pass = PASS_SHADOW;
 			ok &= render_queue_push(&shadow_queue, &op);
 		}
 	}
 
 	// render pass
-	op.pass = RENDER_PASS;
+	op.pass = PASS_RENDER;
 	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
 		ok &= render_queue_push(&render_queue, &op);
 	} else {
@@ -482,7 +501,7 @@ render_text(
 	struct RenderOp op = {
 		.type = TEXT_OP,
 		.transform = *t,
-		.pass = RENDER_PASS,
+		.pass = PASS_RENDER,
 		.text = {
 			.text = text,
 			.props = *props
@@ -505,7 +524,7 @@ render_quad(
 	struct RenderOp op = {
 		.type = QUAD_OP,
 		.transform = *t,
-		.pass = RENDER_PASS,
+		.pass = PASS_RENDER,
 		.quad = {
 			.quad = quad,
 			.props = *props
@@ -516,4 +535,23 @@ render_quad(
 		return render_queue_push(&render_queue, &op);
 	}
 	return render_queue_push(&overlay_queue, &op);
+}
+
+struct Shader*
+renderer_get_shader(int pass)
+{
+	if (pass >= 0 && pass < RENDER_PASS_COUNT) {
+		return passes[pass].get_shader();
+	}
+	return NULL;
+}
+
+int
+renderer_draw(struct Geometry *geom, int pass, struct ShaderUniformValue *values)
+{
+	assert(geom);
+	assert(pass < RENDER_PASS_COUNT);
+	assert(values != NULL);
+
+	return 0;
 }

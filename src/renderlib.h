@@ -3,6 +3,7 @@
 #include "camera.h"
 #include "error.h"
 #include "font.h"
+#include "geometry.h"
 #include "image.h"
 #include "light.h"
 #include "mesh.h"
@@ -78,6 +79,13 @@ enum {
 	RENDER_TARGET_OVERLAY
 };
 
+enum {
+	SHADOW_PASS,
+	TEXT_PASS,
+	QUAD_PASS,
+	PHONG_PASS
+};
+
 /**
  * Initialize renderer library.
  */
@@ -89,6 +97,18 @@ renderer_init(void);
  */
 void
 renderer_clear(void);
+
+/**
+ * Add a geometry draw command to render queue.
+ */
+int
+renderer_draw(struct Geometry *geom, int pass, struct ShaderUniformValue *values);
+
+/**
+ * Get a pointer to render pass shader.
+ */
+struct Shader*
+renderer_get_shader(int pass);
 
 /**
  * Render current render queue and flush it.
