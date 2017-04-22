@@ -35,6 +35,15 @@ struct ShaderUniform {
 };
 
 /**
+ * Shader uniform value.
+ */
+struct ShaderUniformValue {
+	struct ShaderUniform *uniform;
+	size_t count;
+	void *data;
+};
+
+/**
  * Shader uniform block.
  */
 struct ShaderUniformBlock {

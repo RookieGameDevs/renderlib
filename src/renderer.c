@@ -82,6 +82,105 @@ struct RenderOp {
 	int (*exec)(struct RenderOp *op);
 };
 
+/** Shadow pass functions **/
+extern int
+shadow_pass_init(void);
+
+extern void
+shadow_pass_cleanup(void);
+
+extern int
+shadow_pass_enter(void);
+
+extern int
+shadow_pass_exit(void);
+
+/** Text pass functions **/
+extern int
+text_pass_init(void);
+
+extern void
+text_pass_cleanup(void);
+
+extern int
+text_pass_enter(void);
+
+extern int
+text_pass_exit(void);
+
+/** Quad pass functions **/
+extern int
+quad_pass_init(void);
+
+extern void
+quad_pass_cleanup(void);
+
+extern int
+quad_pass_enter(void);
+
+extern int
+quad_pass_exit(void);
+
+/** Phong pass functions **/
+extern int
+phong_pass_init(void);
+
+extern void
+phong_pass_cleanup(void);
+
+extern int
+phong_pass_enter(void);
+
+extern int
+phong_pass_exit(void);
+
+static struct RenderPass {
+	const char *name;
+
+	int
+	(*init)(void);
+
+	void
+	(*cleanup)(void);
+
+	int
+	(*enter)(void);
+
+	int
+	(*exit)(void);
+} passes[] = {
+	{
+		"shadow",
+		shadow_pass_init,
+		shadow_pass_cleanup,
+		shadow_pass_enter,
+		shadow_pass_exit
+	},
+	{
+		"text",
+		text_pass_init,
+		text_pass_cleanup,
+		text_pass_enter,
+		text_pass_exit
+	},
+	{
+		"quad",
+		quad_pass_init,
+		quad_pass_cleanup,
+		quad_pass_enter,
+		quad_pass_exit
+	},
+	{
+		"phong",
+		phong_pass_init,
+		phong_pass_cleanup,
+		phong_pass_enter,
+		phong_pass_exit
+	}
+};
+
+#define RENDER_PASS_COUNT (sizeof(passes) / sizeof(struct RenderPass))
+
 static struct RenderQueue {
 	struct RenderOp queue[RENDER_QUEUE_SIZE];
 	size_t len;
@@ -231,6 +330,18 @@ renderer_init(void)
 		return 0;
 	}
 
+	// initialize render passes
+	for (unsigned i = 0; i < RENDER_PASS_COUNT; i++) {
+		if (!passes[i].init()) {
+			errf(
+				ERR_GENERIC,
+				"%s pass initialization failed",
+				passes[i].name
+			);
+			return 0;
+		}
+	}
+
 	// create shadow map
 	if (!(shadow_map = shadow_map_new(1024, 1024))) {
 		errf(ERR_GENERIC, "shadow map creation failed");
@@ -304,6 +415,9 @@ cleanup:
 void
 renderer_shutdown(void)
 {
+	for (int i = RENDER_PASS_COUNT; i > 0; i--) {
+		passes[i - 1].cleanup();
+	}
 	shadow_map_free(shadow_map);
 	shadow_map = NULL;
 }
