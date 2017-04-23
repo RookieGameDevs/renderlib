@@ -75,6 +75,7 @@ geometry_add_attribute(
 	int ok = 1;
 	glBindVertexArray(geom->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, buf->vbo);
+	glEnableVertexAttribArray(geom->attribute_count);
 	if (type == GL_FLOAT) {
 		glVertexAttribPointer(
 			geom->attribute_count,
