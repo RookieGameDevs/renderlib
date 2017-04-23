@@ -117,6 +117,9 @@ void
 geometry_free(struct Geometry *geom)
 {
 	if (geom) {
+		for (unsigned i = 0; i < geom->attribute_count; i++) {
+			free(geom->attributes[i].name);
+		}
 		glDeleteVertexArrays(1, &geom->vao);
 		free(geom->attributes);
 		free(geom);
