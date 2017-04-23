@@ -3,8 +3,11 @@
 #include <GL/glew.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define RENDER_QUEUE_SIZE 1000
+
+#define MAX_UNIFORM_COUNT 1024
 
 // defined in draw_mesh.c
 int
@@ -57,6 +60,7 @@ enum {
 	PASS_RENDER,
 };
 
+/*
 struct RenderOp {
 	int pass;
 	int type;
@@ -81,6 +85,7 @@ struct RenderOp {
 	};
 	int (*exec)(struct RenderOp *op);
 };
+*/
 
 /** Shadow pass functions **/
 extern int
@@ -200,6 +205,32 @@ static struct RenderPass {
 
 #define RENDER_PASS_COUNT (sizeof(passes) / sizeof(struct RenderPass))
 
+struct DrawCommand {
+	int pass;
+	struct Geometry *geometry;
+	struct ShaderUniformValue *values;
+	size_t value_count;
+};
+
+static struct DrawList {
+	struct DrawCommand commands[RENDER_QUEUE_SIZE];
+	size_t len;
+} draw_list = { .len = 0 };
+
+static struct ShaderUniformValue *current_pass_values = NULL;
+
+static int
+draw_command_cmp(const void *a_ptr, const void *b_ptr)
+{
+	const struct DrawCommand *a = a_ptr, *b = b_ptr;
+	int pass_diff = a->pass - b->pass;
+	if (pass_diff != 0) {
+		return pass_diff;
+	}
+	return a->geometry - b->geometry;
+}
+
+/*
 static struct RenderQueue {
 	struct RenderOp queue[RENDER_QUEUE_SIZE];
 	size_t len;
@@ -322,6 +353,7 @@ render_queue_exec(struct RenderQueue *q)
 	}
 	return ok;
 }
+*/
 
 int
 renderer_init(void)
@@ -340,6 +372,7 @@ renderer_init(void)
 	glEnable(GL_DEPTH_TEST);
 
 	// initialize pipelines
+	/*
 	if (!init_mesh_pipeline() ||
 	    !init_shadow_pipeline() ||
 	    !init_text_pipeline() ||
@@ -348,6 +381,7 @@ renderer_init(void)
 		renderer_shutdown();
 		return 0;
 	}
+	*/
 
 	// initialize render passes
 	for (unsigned i = 0; i < RENDER_PASS_COUNT; i++) {
@@ -361,9 +395,11 @@ renderer_init(void)
 		}
 	}
 
+	/*
 	// create shadow map
 	if (!(shadow_map = shadow_map_new(1024, 1024))) {
 		errf(ERR_GENERIC, "shadow map creation failed");
+		renderer_shutdown();
 		return 0;
 	}
 
@@ -373,6 +409,17 @@ renderer_init(void)
 		&shadow_map_tu
 	);
 	shadow_map_tu -= 1;
+	*/
+
+	// pre-allocate an array for render pass values
+	current_pass_values = malloc(
+		sizeof(struct ShaderUniformValue) * MAX_UNIFORM_COUNT
+	);
+	if (!current_pass_values) {
+		err(ERR_NO_MEM);
+		renderer_shutdown();
+		return 0;
+	}
 
 	return 1;
 }
@@ -383,6 +430,7 @@ renderer_clear(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+/*
 int
 renderer_present(void)
 {
@@ -430,15 +478,126 @@ cleanup:
 
 	return ok;
 }
+*/
+
+int
+renderer_present(void)
+{
+	// sort the draw commands list
+	qsort(
+		draw_list.commands,
+		draw_list.len,
+		sizeof(struct DrawCommand),
+		draw_command_cmp
+	);
+
+	// perform actual draw
+	int current_pass = -1;
+	struct Shader *current_shader = NULL;
+	struct Geometry *current_geom = NULL;
+	for (size_t i = 0; i < draw_list.len; i++) {
+		struct DrawCommand *cmd = &draw_list.commands[i];
+
+		// switch to next render pass, if needed
+		if (current_pass != cmd->pass) {
+			// exit current pass
+			if (current_pass != -1) {
+				if (!passes[current_pass].exit()) {
+					// TODO: push proper error to stack
+					return 0;
+				}
+			}
+
+			current_pass = cmd->pass;
+
+			// enter next pass
+			if (!passes[current_pass].enter()) {
+				// TODO: push proper error to stack
+				return 0;
+			}
+
+			// zero the storage for pass values
+			memset(
+				current_pass_values,
+				0,
+				sizeof(struct ShaderUniformValue) * MAX_UNIFORM_COUNT
+			);
+
+			// initialize the pass values cache
+			current_shader = passes[current_pass].get_shader();
+			for (unsigned u = 0; u < current_shader->uniform_count; u++) {
+				current_pass_values[u].uniform = &current_shader->uniforms[u];
+				current_pass_values[u].count = 0;
+				current_pass_values[u].data = NULL;
+			}
+		}
+
+		// update only changed uniforms
+		for (unsigned u = 0; u < current_shader->uniform_count; u++) {
+			for (unsigned v = 0; v < cmd->value_count; v++) {
+				if (current_pass_values[u].uniform != cmd->values[v].uniform) {
+					continue;
+				}
+
+				if (current_pass_values[u].data != cmd->values[v].data ||
+				    current_pass_values[u].count != cmd->values[v].count) {
+					current_pass_values[u] = cmd->values[v];
+					int ok = shader_uniform_set(
+						cmd->values[v].uniform,
+						cmd->values[v].count,
+						cmd->values[v].data
+					);
+					if (!ok) {
+						// TODO: push proper error message
+						return 0;
+					}
+					break;
+				}
+			}
+		}
+
+		// bind geometry
+		if (current_geom != cmd->geometry) {
+			glBindVertexArray(cmd->geometry->vao);
+			current_geom = cmd->geometry;
+		}
+
+		// draw!
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		if (glGetError() != GL_NO_ERROR) {
+			err(ERR_OPENGL);
+			break;
+		}
+	}
+
+	// exit last pass
+	if (current_pass != -1) {
+		if (!passes[current_pass].exit()) {
+			// TODO: push proper error to stack
+			return 0;
+		}
+	}
+
+	// trim the draw list
+	draw_list.len = 0;
+
+	return 1;
+}
 
 void
 renderer_shutdown(void)
 {
+	free(current_pass_values);
+	current_pass_values = 0;
+
 	for (int i = RENDER_PASS_COUNT; i > 0; i--) {
 		passes[i - 1].cleanup();
 	}
+
+	/*
 	shadow_map_free(shadow_map);
 	shadow_map = NULL;
+	*/
 }
 
 int
@@ -456,6 +615,7 @@ render_mesh(
 
 	int ok = 1;
 
+	/*
 	struct RenderOp op = {
 		.type = MESH_OP,
 		.transform = *t,
@@ -487,6 +647,7 @@ render_mesh(
 	} else {
 		ok &= render_queue_push(&overlay_queue, &op);
 	}
+	*/
 
 	return ok;
 }
@@ -498,6 +659,7 @@ render_text(
 	struct TextProps *props,
 	struct Transform *t
 ) {
+	/*
 	struct RenderOp op = {
 		.type = TEXT_OP,
 		.transform = *t,
@@ -512,6 +674,8 @@ render_text(
 		return render_queue_push(&render_queue, &op);
 	}
 	return render_queue_push(&overlay_queue, &op);
+	*/
+	return 1;
 }
 
 int
@@ -521,6 +685,7 @@ render_quad(
 	struct QuadProps *props,
 	struct Transform *t
 ) {
+	/*
 	struct RenderOp op = {
 		.type = QUAD_OP,
 		.transform = *t,
@@ -535,6 +700,8 @@ render_quad(
 		return render_queue_push(&render_queue, &op);
 	}
 	return render_queue_push(&overlay_queue, &op);
+	*/
+	return 1;
 }
 
 struct Shader*
@@ -547,11 +714,24 @@ renderer_get_shader(int pass)
 }
 
 int
-renderer_draw(struct Geometry *geom, int pass, struct ShaderUniformValue *values)
-{
+renderer_draw(
+	struct Geometry *geom,
+	int pass,
+	struct ShaderUniformValue *values,
+	size_t value_count
+) {
 	assert(geom);
 	assert(pass < RENDER_PASS_COUNT);
 	assert(values != NULL);
 
-	return 0;
+	if (draw_list.len == RENDER_QUEUE_SIZE) {
+		err(ERR_RENDER_QUEUE_FULL);
+		return 0;
+	}
+	struct DrawCommand *cmd = &draw_list.commands[draw_list.len++];
+	cmd->pass = pass;
+	cmd->geometry = geom;
+	cmd->values = values;
+	cmd->value_count = value_count;
+	return 1;
 }

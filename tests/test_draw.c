@@ -17,8 +17,8 @@ make_test_geometry(
 	*r_normals = NULL;
 
 	float positions[] = {
-		-0.5, 0.0, 0.0,
-		 0.5, 0.0, 0.0,
+		-0.5, -0.3, 0.0,
+		 0.5, -0.3, 0.0,
 		 0.0, 0.7, 0.0
 	};
 	struct Buffer *pos_buf = buffer_new(sizeof(positions), positions);
@@ -110,9 +110,9 @@ START_TEST(test_simple_draw)
 		{ .count = 1, .data = &enable_lighting },
 		{ .count = 1, .data = &enable_texture_mapping },
 		{ .count = 1, .data = &color },
-		{ .count = 0 }
 	};
-	for (unsigned i = 0; i < sizeof(names) / sizeof(char*); i++) {
+	unsigned value_count = sizeof(names) / sizeof(char*);
+	for (unsigned i = 0; i < value_count; i++) {
 		struct ShaderUniform *uniform = NULL;
 		for (unsigned j = 0; j < shader->uniform_count; j++) {
 			if (strcmp(shader->uniforms[j].name, names[i]) == 0) {
@@ -126,7 +126,10 @@ START_TEST(test_simple_draw)
 	}
 
 	// perform the draw
-	ck_assert(renderer_draw(geom, PHONG_PASS, values));
+	renderer_clear();
+	ck_assert(renderer_draw(geom, PHONG_PASS, values, value_count));
+	ck_assert(renderer_present());
+	render_frame("test_simple_draw");
 
 	buffer_free(norm_buf);
 	buffer_free(pos_buf);

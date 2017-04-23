@@ -60,3 +60,13 @@ teardown(void)
 	// shutdown SDL
 	SDL_Quit();
 }
+
+void
+render_frame(const char *testcase_name)
+{
+	SDL_SetWindowTitle(window, testcase_name);
+	SDL_GL_SwapWindow(window);
+	SDL_Event evt;
+	while (SDL_PollEvent(&evt));
+	SDL_Delay(1000);
+}

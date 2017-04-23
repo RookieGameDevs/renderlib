@@ -49,15 +49,13 @@ phong_pass_init(void)
 int
 phong_pass_enter(void)
 {
-	// TODO
-	return 0;
+	return shader_bind(shader);
 }
 
 int
 phong_pass_exit(void)
 {
-	// TODO
-	return 0;
+	return 1;
 }
 
 

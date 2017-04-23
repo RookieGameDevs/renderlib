@@ -102,7 +102,12 @@ renderer_clear(void);
  * Add a geometry draw command to render queue.
  */
 int
-renderer_draw(struct Geometry *geom, int pass, struct ShaderUniformValue *values);
+renderer_draw(
+	struct Geometry *geom,
+	int pass,
+	struct ShaderUniformValue *values,
+	size_t value_count
+);
 
 /**
  * Get a pointer to render pass shader.
