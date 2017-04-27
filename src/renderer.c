@@ -391,7 +391,7 @@ renderer_init(void)
 				"%s pass initialization failed",
 				passes[i].name
 			);
-			return 0;
+			goto error;
 		}
 	}
 
@@ -417,11 +417,14 @@ renderer_init(void)
 	);
 	if (!current_pass_values) {
 		err(ERR_NO_MEM);
-		renderer_shutdown();
-		return 0;
+		goto error;
 	}
 
 	return 1;
+
+error:
+	renderer_shutdown();
+	return 0;
 }
 
 void
