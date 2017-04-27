@@ -526,8 +526,9 @@ renderer_present(void)
 				sizeof(struct ShaderUniformValue) * MAX_UNIFORM_COUNT
 			);
 
-			// initialize the pass values cache
+			// bind the shader and initialize pass values
 			current_shader = passes[current_pass].get_shader();
+			shader_bind(current_shader);
 			for (unsigned u = 0; u < current_shader->uniform_count; u++) {
 				current_pass_values[u].uniform = &current_shader->uniforms[u];
 				current_pass_values[u].count = 0;

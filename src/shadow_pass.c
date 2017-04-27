@@ -18,6 +18,8 @@ static struct ShaderSource *shader_sources[2] = { NULL, NULL };
 static GLuint shadow_map_texture = 0;
 static GLuint shadow_map_fb = 0;
 
+static GLint viewport[4];
+
 void
 shadow_pass_cleanup(void)
 {
@@ -119,15 +121,29 @@ error:
 int
 shadow_pass_enter(void)
 {
-	// TODO
-	return 0;
+	// get current viewport dimensions
+	glGetIntegerv(GL_VIEWPORT, viewport);
+
+	// set viewport to the size of the shadow map texture
+	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+
+	// bind the shadow map framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fb);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	return glGetError() == GL_NO_ERROR;
 }
 
 int
 shadow_pass_exit(void)
 {
-	// TODO
-	return 0;
+	// restore the default framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// restore original viewport size
+	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+	return glGetError() == GL_NO_ERROR;
 }
 
 

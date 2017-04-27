@@ -49,7 +49,7 @@ phong_pass_init(void)
 int
 phong_pass_enter(void)
 {
-	return shader_bind(shader);
+	return 1;
 }
 
 int
