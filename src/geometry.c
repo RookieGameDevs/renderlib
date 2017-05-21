@@ -31,7 +31,7 @@ geometry_add_attribute(
 	struct Geometry *geom,
 	struct Buffer *buf,
 	const char *name,
-	int type,
+	GLenum type,
 	int size,
 	int stride,
 	void *offset
@@ -112,6 +112,32 @@ geometry_add_attribute(
 	glBindVertexArray(0);
 
 	return ok;
+}
+
+int
+geometry_set_index(
+	struct Geometry *geom,
+	struct Buffer *buf,
+	GLenum type,
+	unsigned long count
+) {
+	assert(geom != NULL);
+	assert(buf != NULL);
+	assert(
+		type == GL_UNSIGNED_BYTE ||
+		type == GL_UNSIGNED_SHORT ||
+		type == GL_UNSIGNED_INT
+	);
+
+	glBindVertexArray(geom->vao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->vbo);
+
+	geom->elements_type = type;
+	geom->elements_count = count;
+
+	glBindVertexArray(0);
+
+	return glGetError() != GL_NO_ERROR;
 }
 
 void

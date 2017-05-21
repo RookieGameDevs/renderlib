@@ -157,7 +157,10 @@ def build(bld):
         source=bld.path.ant_glob('src/**/*.c'),
         uselib=deps,
         install_path='${PREFIX}/lib',
-        includes=bld.bldnode.find_or_declare('shaders').abspath(),
+        includes=[
+            bld.path.find_dir('src'),
+            bld.bldnode.find_or_declare('shaders').abspath(),
+        ],
         use=shaders,
         **kwargs)
 

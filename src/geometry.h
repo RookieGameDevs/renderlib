@@ -8,6 +8,9 @@ struct Geometry {
 	struct Attribute *attributes;
 	unsigned attribute_count;
 
+	GLenum elements_type;
+	unsigned long elements_count;
+
 	GLuint vao;
 };
 
@@ -25,10 +28,18 @@ geometry_add_attribute(
 	struct Geometry *geom,
 	struct Buffer *buf,
 	const char *name,
-	int type,
+	GLenum type,
 	int size,
 	int stride,
 	void *offset
+);
+
+int
+geometry_set_index(
+	struct Geometry *geom,
+	struct Buffer *buf,
+	GLenum type,
+	unsigned long count
 );
 
 void
