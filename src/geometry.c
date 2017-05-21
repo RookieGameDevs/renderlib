@@ -137,7 +137,7 @@ geometry_set_index(
 
 	glBindVertexArray(0);
 
-	return glGetError() != GL_NO_ERROR;
+	return glGetError() == GL_NO_ERROR;
 }
 
 void

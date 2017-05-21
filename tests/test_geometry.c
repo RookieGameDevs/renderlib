@@ -1,7 +1,10 @@
+#include "anim.h"
+#include "file_utils.h"
 #include "fixture.h"
-#include <check.h>
-
 #include "geometry.h"
+#include "loaders/loaders.h"
+#include <check.h>
+#include <stdlib.h>
 
 START_TEST(test_simple)
 {
@@ -65,6 +68,26 @@ START_TEST(test_simple)
 }
 END_TEST
 
+START_TEST(test_load_from_file)
+{
+	char *data = NULL;
+	size_t size = file_read("tests/data/zombie.mesh", &data);
+	ck_assert_int_gt(size, 0);
+
+	struct Geometry *geom = NULL;
+	struct Animation *animations = NULL;
+	unsigned animations_count = 0;
+	ck_assert(load_mesh(data, size, &geom, &animations, &animations_count, NULL));
+	ck_assert_uint_eq(geom->attribute_count, 5);
+	ck_assert_uint_eq(geom->elements_count, 37368);
+	ck_assert_uint_eq(animations_count, 1);
+
+	geometry_free(geom);
+
+	free(data);
+}
+END_TEST
+
 Suite*
 geometry_suite(void)
 {
@@ -73,6 +96,7 @@ geometry_suite(void)
 	TCase *tc_core = tcase_create("core");
 	tcase_add_checked_fixture(tc_core, setup, teardown);
 	tcase_add_test(tc_core, test_simple);
+	tcase_add_test(tc_core, test_load_from_file);
 	suite_add_tcase(s, tc_core);
 
 	return s;
