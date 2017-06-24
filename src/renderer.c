@@ -12,8 +12,12 @@
 // defined in shadow_pass.c
 extern struct RenderPassCls shadow_pass_cls;
 
+// defined in text_pass.c
+extern struct RenderPassCls text_pass_cls;
+
 static const struct RenderPassCls *pass_classes[] = {
 	&shadow_pass_cls,
+	&text_pass_cls,
 };
 
 #define RENDER_PASS_COUNT (sizeof(pass_classes) / sizeof(struct RenderPassCls*))
