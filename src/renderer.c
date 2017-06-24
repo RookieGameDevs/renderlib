@@ -1,209 +1,24 @@
 #include "renderlib.h"
-#include "shadow_map.h"
 #include <GL/glew.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
+// maximum size of the render queue
 #define RENDER_QUEUE_SIZE 1000
 
 #define MAX_UNIFORM_COUNT 1024
 
-// defined in draw_mesh.c
-int
-init_mesh_pipeline(void);
+// defined in shadow_pass.c
+extern struct RenderPassCls shadow_pass_cls;
 
-int
-draw_mesh(
-	struct Mesh *mesh,
-	struct MeshProps *props,
-	struct Transform *transform,
-	struct Light *light,
-	Vec *eye,
-	int shadow_map
-);
-
-// defined in draw_shadow.c
-int
-init_shadow_pipeline(void);
-
-int
-draw_mesh_shadow(
-	struct Mesh *mesh,
-	struct MeshProps *props,
-	struct Transform *transform,
-	struct Light *light
-);
-
-// defined in draw_text.c
-int
-init_text_pipeline(void);
-
-int
-draw_text(struct Text *text, struct TextProps *props, struct Transform *transform);
-
-// defined in draw_quad.c
-int
-init_quad_pipeline(void);
-
-int
-draw_quad(struct Quad *quad, struct QuadProps *props, struct Transform *transform);
-
-enum {
-	MESH_OP = 1,
-	TEXT_OP,
-	QUAD_OP
+static const struct RenderPassCls *pass_classes[] = {
+	&shadow_pass_cls,
 };
 
-enum {
-	PASS_SHADOW = 1,
-	PASS_RENDER,
-};
+#define RENDER_PASS_COUNT (sizeof(pass_classes) / sizeof(struct RenderPassCls*))
 
-/*
-struct RenderOp {
-	int pass;
-	int type;
-	Vec position;
-	struct Transform transform;
-	union {
-		struct {
-			struct Mesh *mesh;
-			struct MeshProps props;
-			struct Light light;
-			Vec eye;
-			int is_lit;
-		} mesh;
-		struct {
-			struct Text *text;
-			struct TextProps props;
-		} text;
-		struct {
-			struct Quad *quad;
-			struct QuadProps props;
-		} quad;
-	};
-	int (*exec)(struct RenderOp *op);
-};
-*/
-
-/** Shadow pass functions **/
-extern int
-shadow_pass_init(void);
-
-extern void
-shadow_pass_cleanup(void);
-
-extern int
-shadow_pass_enter(void);
-
-extern int
-shadow_pass_exit(void);
-
-extern struct Shader*
-shadow_pass_get_shader(void);
-
-/** Text pass functions **/
-extern int
-text_pass_init(void);
-
-extern void
-text_pass_cleanup(void);
-
-extern int
-text_pass_enter(void);
-
-extern int
-text_pass_exit(void);
-
-extern struct Shader*
-text_pass_get_shader(void);
-
-/** Quad pass functions **/
-extern int
-quad_pass_init(void);
-
-extern void
-quad_pass_cleanup(void);
-
-extern int
-quad_pass_enter(void);
-
-extern int
-quad_pass_exit(void);
-
-extern struct Shader*
-quad_pass_get_shader(void);
-
-/** Phong pass functions **/
-extern int
-phong_pass_init(void);
-
-extern void
-phong_pass_cleanup(void);
-
-extern int
-phong_pass_enter(void);
-
-extern int
-phong_pass_exit(void);
-
-extern struct Shader*
-phong_pass_get_shader(void);
-
-static struct RenderPass {
-	const char *name;
-
-	int
-	(*init)(void);
-
-	void
-	(*cleanup)(void);
-
-	int
-	(*enter)(void);
-
-	int
-	(*exit)(void);
-
-	struct Shader*
-	(*get_shader)(void);
-} passes[] = {
-	{
-		"shadow",
-		shadow_pass_init,
-		shadow_pass_cleanup,
-		shadow_pass_enter,
-		shadow_pass_exit,
-		shadow_pass_get_shader
-	},
-	{
-		"text",
-		text_pass_init,
-		text_pass_cleanup,
-		text_pass_enter,
-		text_pass_exit,
-		text_pass_get_shader
-	},
-	{
-		"quad",
-		quad_pass_init,
-		quad_pass_cleanup,
-		quad_pass_enter,
-		quad_pass_exit,
-		quad_pass_get_shader
-	},
-	{
-		"phong",
-		phong_pass_init,
-		phong_pass_cleanup,
-		phong_pass_enter,
-		phong_pass_exit,
-		phong_pass_get_shader
-	}
-};
-
-#define RENDER_PASS_COUNT (sizeof(passes) / sizeof(struct RenderPass))
+static struct RenderPass *passes[RENDER_PASS_COUNT] = { NULL };
 
 struct DrawCommand {
 	int pass;
@@ -230,131 +45,6 @@ draw_command_cmp(const void *a_ptr, const void *b_ptr)
 	return a->geometry - b->geometry;
 }
 
-/*
-static struct RenderQueue {
-	struct RenderOp queue[RENDER_QUEUE_SIZE];
-	size_t len;
-} shadow_queue = { .len = 0 }, render_queue = { .len = 0 }, overlay_queue = { .len = 0 };
-
-static struct ShadowMap *shadow_map = NULL;
-static int shadow_map_tu = -1;
-
-static int
-render_queue_push(struct RenderQueue *q, const struct RenderOp *op)
-{
-	if (q->len == RENDER_QUEUE_SIZE) {
-		err(ERR_RENDER_QUEUE_FULL);
-		return 0;
-	}
-	q->queue[q->len++] = *op;
-	return 1;
-}
-
-static void
-render_queue_flush(struct RenderQueue *q)
-{
-	q->len = 0;
-}
-
-static int
-exec_mesh_op(struct RenderOp *op)
-{
-	int ok = 1;
-	switch (op->pass) {
-	case PASS_SHADOW:
-		ok &= draw_mesh_shadow(
-			op->mesh.mesh,
-			&op->mesh.props,
-			&op->transform,
-			&op->mesh.light
-		);
-		break;
-	case PASS_RENDER:
-		ok &= draw_mesh(
-			op->mesh.mesh,
-			&op->mesh.props,
-			&op->transform,
-			op->mesh.is_lit ? &op->mesh.light : NULL,
-			op->mesh.is_lit ? &op->mesh.eye : NULL,
-			shadow_map_tu
-		);
-		break;
-	}
-	return ok;
-}
-
-static int
-exec_text_op(struct RenderOp *op)
-{
-	return draw_text(op->text.text, &op->text.props, &op->transform);
-}
-
-static int
-exec_quad_op(struct RenderOp *op)
-{
-	return draw_quad(op->quad.quad, &op->quad.props, &op->transform);
-}
-
-static int
-render_op_cmp(const void *ptr1, const void *ptr2)
-{
-	const struct RenderOp *op1 = ptr1, *op2 = ptr2;
-
-	// meshes come first as they are non-transparent non-translucent opaque
-	// objects by definition
-	if (op1->type == MESH_OP && op2->type == MESH_OP) {
-		if (op1->mesh.mesh < op2->mesh.mesh) {
-			return -1;
-		} else if (op1->mesh.mesh == op2->mesh.mesh) {
-			return 0;
-		}
-		return 1;
-	} else if (op1->type == MESH_OP) {
-		return -1;
-	} else if (op2->type == MESH_OP) {
-		return 1;
-	}
-
-	// TODO: this is a simple Z-based sort, which works only for text and
-	// quads which are rendered using a non-rotated orthographic projection
-	// volume
-	if (op1->position.data[2] < op2->position.data[2]) {
-		return -1;
-	} else if (fabs(op1->position.data[2] - op2->position.data[2]) < 1e-6) {
-		return 0;
-	}
-	return 1;
-}
-
-static int
-render_queue_exec(struct RenderQueue *q)
-{
-	int ok = 1;
-
-	// compute op target position in world coordinates
-	Mat modelview;
-	Vec origin = vec(0, 0, 0, 1);
-	for (size_t i = 0; i < q->len; i++) {
-		mat_mul(
-			&q->queue[i].transform.view,
-			&q->queue[i].transform.model,
-			&modelview
-		);
-		mat_mulv(&modelview, &origin, &q->queue[i].position);
-	}
-
-	// sort operations in render queue as specified by `render_op_cmp()`
-	qsort(q->queue, q->len, sizeof(struct RenderOp), render_op_cmp);
-
-	// execute render operations
-	for (int i = 0; i < q->len; i++) {
-		struct RenderOp *op = &q->queue[i];
-		ok &= op->exec(op);
-	}
-	return ok;
-}
-*/
-
 int
 renderer_init(void)
 {
@@ -371,45 +61,17 @@ renderer_init(void)
 	glClearColor(0.3, 0.3, 0.3, 1.0);
 	glEnable(GL_DEPTH_TEST);
 
-	// initialize pipelines
-	/*
-	if (!init_mesh_pipeline() ||
-	    !init_shadow_pipeline() ||
-	    !init_text_pipeline() ||
-	    !init_quad_pipeline()) {
-		errf(ERR_GENERIC, "pipelines initialization failed");
-		renderer_shutdown();
-		return 0;
-	}
-	*/
-
 	// initialize render passes
 	for (unsigned i = 0; i < RENDER_PASS_COUNT; i++) {
-		if (!passes[i].init()) {
+		if (!(passes[i] = pass_classes[i]->alloc())) {
 			errf(
 				ERR_GENERIC,
 				"%s pass initialization failed",
-				passes[i].name
+				pass_classes[i]->name
 			);
 			goto error;
 		}
 	}
-
-	/*
-	// create shadow map
-	if (!(shadow_map = shadow_map_new(1024, 1024))) {
-		errf(ERR_GENERIC, "shadow map creation failed");
-		renderer_shutdown();
-		return 0;
-	}
-
-	// reserve a texture unit for shadow map
-	glGetIntegerv(
-		GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS,
-		&shadow_map_tu
-	);
-	shadow_map_tu -= 1;
-	*/
 
 	// pre-allocate an array for render pass values
 	current_pass_values = malloc(
@@ -433,56 +95,6 @@ renderer_clear(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-/*
-int
-renderer_present(void)
-{
-	int ok = 1;
-
-	// shadows pass
-	int viewport[4];
-	glGetIntegerv(GL_VIEWPORT, viewport);
-	glViewport(0, 0, shadow_map->width, shadow_map->height);
-	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map->fbo);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	ok = render_queue_exec(&shadow_queue);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-	if (!ok) {
-		errf(ERR_GENERIC, "shadow pass failed");
-		goto cleanup;
-	}
-
-	// render pass
-	glActiveTexture(GL_TEXTURE0 + shadow_map_tu);
-	glBindTexture(GL_TEXTURE_2D, shadow_map->texture);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	ok = render_queue_exec(&render_queue);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	if (!ok) {
-		errf(ERR_GENERIC, "render pass failed");
-		goto cleanup;
-	}
-
-	// overlay pass
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_DEPTH_TEST);
-	ok = render_queue_exec(&overlay_queue);
-	glEnable(GL_DEPTH_TEST);
-	if (!ok) {
-		errf(ERR_GENERIC, "overlay pass failed");
-		goto cleanup;
-	}
-
-cleanup:
-	render_queue_flush(&shadow_queue);
-	render_queue_flush(&render_queue);
-	render_queue_flush(&overlay_queue);
-
-	return ok;
-}
-*/
-
 int
 renderer_present(void)
 {
@@ -505,19 +117,18 @@ renderer_present(void)
 		if (current_pass != cmd->pass) {
 			// exit current pass
 			if (current_pass != -1) {
-				if (!passes[current_pass].exit()) {
+				if (!passes[current_pass]->cls->exit(passes[current_pass])) {
 					// TODO: push proper error to stack
 					return 0;
 				}
 			}
 
-			current_pass = cmd->pass;
-
 			// enter next pass
-			if (!passes[current_pass].enter()) {
+			if (!passes[cmd->pass]->cls->enter(passes[cmd->pass])) {
 				// TODO: push proper error to stack
 				return 0;
 			}
+			current_pass = cmd->pass;
 
 			// zero the storage for pass values
 			memset(
@@ -527,7 +138,7 @@ renderer_present(void)
 			);
 
 			// bind the shader and initialize pass values
-			current_shader = passes[current_pass].get_shader();
+			current_shader = passes[current_pass]->cls->get_shader(passes[current_pass]);
 			shader_bind(current_shader);
 			for (unsigned u = 0; u < current_shader->uniform_count; u++) {
 				current_pass_values[u].uniform = &current_shader->uniforms[u];
@@ -576,7 +187,7 @@ renderer_present(void)
 
 	// exit last pass
 	if (current_pass != -1) {
-		if (!passes[current_pass].exit()) {
+		if (!passes[current_pass]->cls->exit(passes[current_pass])) {
 			// TODO: push proper error to stack
 			return 0;
 		}
@@ -595,13 +206,16 @@ renderer_shutdown(void)
 	current_pass_values = 0;
 
 	for (int i = RENDER_PASS_COUNT; i > 0; i--) {
-		passes[i - 1].cleanup();
+		int index = i - 1;
+		passes[index]->cls->free(passes[index]);
+		passes[index] = NULL;
 	}
+}
 
-	/*
-	shadow_map_free(shadow_map);
-	shadow_map = NULL;
-	*/
+struct RenderPass*
+renderer_get_pass(int pass)
+{
+	return passes[pass];
 }
 
 int
@@ -617,43 +231,8 @@ render_mesh(
 	assert(props != NULL);
 	assert(t != NULL);
 
-	int ok = 1;
-
-	/*
-	struct RenderOp op = {
-		.type = MESH_OP,
-		.transform = *t,
-		.mesh = {
-			.mesh = mesh,
-			.props = *props,
-		},
-		.exec = exec_mesh_op
-	};
-
-	// enable lighting and shadow casting only if light parameters are
-	// specified
-	if (light && eye && render_target == RENDER_TARGET_FRAMEBUFFER) {
-		op.mesh.is_lit = 1;
-		op.mesh.light = *light;
-		op.mesh.eye = *eye;
-
-		// shadow pass
-		if (props->cast_shadows) {
-			op.pass = PASS_SHADOW;
-			ok &= render_queue_push(&shadow_queue, &op);
-		}
-	}
-
-	// render pass
-	op.pass = PASS_RENDER;
-	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
-		ok &= render_queue_push(&render_queue, &op);
-	} else {
-		ok &= render_queue_push(&overlay_queue, &op);
-	}
-	*/
-
-	return ok;
+	// TODO: remove this function
+	return 1;
 }
 
 int
@@ -663,22 +242,7 @@ render_text(
 	struct TextProps *props,
 	struct Transform *t
 ) {
-	/*
-	struct RenderOp op = {
-		.type = TEXT_OP,
-		.transform = *t,
-		.pass = PASS_RENDER,
-		.text = {
-			.text = text,
-			.props = *props
-		},
-		.exec = exec_text_op
-	};
-	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
-		return render_queue_push(&render_queue, &op);
-	}
-	return render_queue_push(&overlay_queue, &op);
-	*/
+	// TODO: remove this function
 	return 1;
 }
 
@@ -689,32 +253,8 @@ render_quad(
 	struct QuadProps *props,
 	struct Transform *t
 ) {
-	/*
-	struct RenderOp op = {
-		.type = QUAD_OP,
-		.transform = *t,
-		.pass = PASS_RENDER,
-		.quad = {
-			.quad = quad,
-			.props = *props
-		},
-		.exec = exec_quad_op
-	};
-	if (render_target == RENDER_TARGET_FRAMEBUFFER) {
-		return render_queue_push(&render_queue, &op);
-	}
-	return render_queue_push(&overlay_queue, &op);
-	*/
+	// TODO: remove this function
 	return 1;
-}
-
-struct Shader*
-renderer_get_shader(int pass)
-{
-	if (pass >= 0 && pass < RENDER_PASS_COUNT) {
-		return passes[pass].get_shader();
-	}
-	return NULL;
 }
 
 int

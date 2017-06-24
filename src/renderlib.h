@@ -15,6 +15,29 @@
 // matlib
 #include <matlib.h>
 
+struct RenderPass {
+	const struct RenderPassCls *cls;
+};
+
+struct RenderPassCls {
+	const char *name;
+
+	struct RenderPass*
+	(*alloc)(void);
+
+	void
+	(*free)(struct RenderPass *pass);
+
+	int
+	(*enter)(struct RenderPass *pass);
+
+	int
+	(*exit)(struct RenderPass *pass);
+
+	struct Shader*
+	(*get_shader)(struct RenderPass *pass);
+};
+
 /**
  * Material.
  */
@@ -110,12 +133,6 @@ renderer_draw(
 );
 
 /**
- * Get a pointer to render pass shader.
- */
-struct Shader*
-renderer_get_shader(int pass);
-
-/**
  * Render current render queue and flush it.
  */
 int
@@ -126,6 +143,9 @@ renderer_present(void);
  */
 void
 renderer_shutdown(void);
+
+struct RenderPass*
+renderer_get_pass(int pass);
 
 /**
  * Render a mesh.

@@ -1,6 +1,8 @@
 #include "error.h"
 #include "shader.h"
+#include "renderlib.h"
 #include <GL/glew.h>
+#include <stdlib.h>
 
 #define SHADOW_MAP_SIZE 1024
 
@@ -12,62 +14,133 @@ static const char *fragment_shader = (
 # include "shadow.frag.h"
 );
 
-static struct Shader *shader = NULL;
-static struct ShaderSource *shader_sources[2] = { NULL, NULL };
+static struct RenderPass*
+shadow_pass_alloc(void);
 
-static GLuint shadow_map_texture = 0;
-static GLuint shadow_map_fb = 0;
+static void
+shadow_pass_free(struct RenderPass *pass);
 
-static GLint viewport[4];
+static int
+shadow_pass_enter(struct RenderPass *pass);
 
-void
-shadow_pass_cleanup(void)
+static int
+shadow_pass_exit(struct RenderPass *pass);
+
+static struct Shader*
+shadow_pass_get_shader(struct RenderPass *pass);
+
+struct RenderPassCls shadow_pass_cls = {
+	.name = "shadow",
+	.alloc = shadow_pass_alloc,
+	.free = shadow_pass_free,
+	.enter = shadow_pass_enter,
+	.exit = shadow_pass_exit,
+	.get_shader = shadow_pass_get_shader
+};
+
+struct ShadowPass {
+	struct RenderPass super;
+	GLuint shadow_map_texture;
+	GLuint shadow_map_fb;
+	GLint viewport[4];
+	struct Shader *shader;
+	struct ShaderSource *shader_sources[2];
+};
+
+
+static int
+shadow_pass_enter(struct RenderPass *pass)
 {
-	glDeleteFramebuffers(1, &shadow_map_fb);
-	shadow_map_fb = 0;
+	struct ShadowPass *_pass = (struct ShadowPass*)pass;
 
-	glDeleteTextures(1, &shadow_map_texture);
-	shadow_map_texture = 0;
+	// get current viewport dimensions
+	glGetIntegerv(GL_VIEWPORT, _pass->viewport);
 
-	shader_source_free(shader_sources[0]);
-	shader_source_free(shader_sources[1]);
-	shader_sources[0] = shader_sources[1] = NULL;
+	// set viewport to the size of the shadow map texture
+	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
 
-	shader_free(shader);
-	shader = NULL;
+	// bind the shadow map framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, _pass->shadow_map_fb);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	return glGetError() == GL_NO_ERROR;
 }
 
-int
-shadow_pass_init(void)
+static int
+shadow_pass_exit(struct RenderPass *pass)
 {
-	int ok = 1;
+	struct ShadowPass *_pass = (struct ShadowPass*)pass;
+
+	// restore the default framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// restore original viewport size
+	glViewport(
+		_pass->viewport[0],
+		_pass->viewport[1],
+		_pass->viewport[2],
+		_pass->viewport[3]
+	);
+
+	return glGetError() == GL_NO_ERROR;
+}
+
+
+static struct Shader*
+shadow_pass_get_shader(struct RenderPass *pass)
+{
+	return ((struct ShadowPass*)pass)->shader;;
+}
+
+static void
+shadow_pass_free(struct RenderPass *pass)
+{
+	if (pass) {
+		struct ShadowPass *_pass = (struct ShadowPass*)pass;
+		glDeleteFramebuffers(1, &_pass->shadow_map_fb);
+		glDeleteTextures(1, &_pass->shadow_map_texture);
+		shader_source_free(_pass->shader_sources[0]);
+		shader_source_free(_pass->shader_sources[1]);
+		shader_free(_pass->shader);
+	}
+}
+
+static struct RenderPass*
+shadow_pass_alloc(void)
+{
+	struct ShadowPass *pass = malloc(sizeof(struct ShadowPass));
+	if (!pass) {
+		err(ERR_NO_MEM);
+		return NULL;
+	}
+	pass->super.cls = &shadow_pass_cls;
 
 	// compile shadow pass shader
-	shader_sources[0] = shader_source_from_string(
+	pass->shader_sources[0] = shader_source_from_string(
 		vertex_shader,
 		GL_VERTEX_SHADER
 	);
-	shader_sources[1] = shader_source_from_string(
+	pass->shader_sources[1] = shader_source_from_string(
 		fragment_shader,
 		GL_FRAGMENT_SHADER
 	);
-	if (!shader_sources[0] ||
-	    !shader_sources[1] ||
-	    !(shader = shader_new(shader_sources, 2))) {
+	if (!pass->shader_sources[0] ||
+	    !pass->shader_sources[1] ||
+	    !(pass->shader = shader_new(pass->shader_sources, 2))) {
 		errf(ERR_GENERIC, "failed to compile shadow pass shader");
 		goto error;
 	}
 
 	// create a texture for shadow map
-	glGenTextures(1, &shadow_map_texture);
-	if (!shadow_map_texture) {
+	glGenTextures(1, &pass->shadow_map_texture);
+	if (!pass->shadow_map_texture) {
 		err(ERR_OPENGL);
 		goto error;
 	}
 
 	// configure the texture to have rectangular size and store 16-bit depth
 	// values
-	glBindTexture(GL_TEXTURE_2D, shadow_map_texture);
+	glBindTexture(GL_TEXTURE_2D, pass->shadow_map_texture);
 	glTexImage2D(
 		GL_TEXTURE_2D,
 		0,
@@ -86,16 +159,16 @@ shadow_pass_init(void)
 
 	// create a framebuffer object and attach the previously created texture
 	// to depth attachment point
-	glGenFramebuffers(1, &shadow_map_fb);
-	if (!shadow_map_fb || glGetError() != GL_NO_ERROR) {
+	glGenFramebuffers(1, &pass->shadow_map_fb);
+	if (!pass->shadow_map_fb || glGetError() != GL_NO_ERROR) {
 		err(ERR_OPENGL);
 		goto error;
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fb);
+	glBindFramebuffer(GL_FRAMEBUFFER, pass->shadow_map_fb);
 	glFramebufferTexture(
 		GL_FRAMEBUFFER,
 		GL_DEPTH_ATTACHMENT,
-		shadow_map_texture,
+		pass->shadow_map_texture,
 		0
 	);
 	glReadBuffer(GL_NONE);
@@ -110,45 +183,10 @@ shadow_pass_init(void)
 cleanup:
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	return ok;
+	return (struct RenderPass*)pass;
 
 error:
-	shadow_pass_cleanup();
-	ok = 0;
+	shadow_pass_free((struct RenderPass*)pass);
+	pass = NULL;
 	goto cleanup;
-}
-
-int
-shadow_pass_enter(void)
-{
-	// get current viewport dimensions
-	glGetIntegerv(GL_VIEWPORT, viewport);
-
-	// set viewport to the size of the shadow map texture
-	glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
-
-	// bind the shadow map framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fb);
-	glClear(GL_DEPTH_BUFFER_BIT);
-
-	return glGetError() == GL_NO_ERROR;
-}
-
-int
-shadow_pass_exit(void)
-{
-	// restore the default framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	// restore original viewport size
-	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-
-	return glGetError() == GL_NO_ERROR;
-}
-
-
-struct Shader*
-shadow_pass_get_shader(void)
-{
-	return shader;
 }

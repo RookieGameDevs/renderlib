@@ -75,7 +75,9 @@ START_TEST(test_simple_draw)
 	Vec color = vec(1, 1, 1, 1);
 
 	// retrieve the Phong pass shader
-	struct Shader *shader = renderer_get_shader(PHONG_PASS);
+	struct RenderPass *pass = renderer_get_pass(PHONG_PASS);
+	ck_assert(pass);
+	struct Shader *shader = pass->cls->get_shader(pass);
 	ck_assert(shader);
 
 	// check that the shader accepts the attributes specified in geometry
