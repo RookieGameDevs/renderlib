@@ -18,10 +18,14 @@ extern struct RenderPassCls text_pass_cls;
 // defined in quad_pass.c
 extern struct RenderPassCls quad_pass_cls;
 
+// defined in phong_pass.c
+extern struct RenderPassCls phong_pass_cls;
+
 static const struct RenderPassCls *pass_classes[] = {
 	&shadow_pass_cls,
 	&text_pass_cls,
 	&quad_pass_cls,
+	&phong_pass_cls,
 };
 
 #define RENDER_PASS_COUNT (sizeof(pass_classes) / sizeof(struct RenderPassCls*))
