@@ -7,8 +7,6 @@
 // maximum size of the render queue
 #define RENDER_QUEUE_SIZE 1000
 
-#define MAX_UNIFORM_COUNT 1024
-
 // defined in shadow_pass.c
 extern struct RenderPassCls shadow_pass_cls;
 
@@ -44,7 +42,11 @@ static struct RenderQueue {
 	size_t len;
 } queue = { .len = 0 };
 
-static struct ShaderUniformValue *current_pass_values = NULL;
+// Maximum number of pass shader uniforms
+#define MAX_UNIFORM_COUNT 1024
+
+// Static container of current render pass shader uniforms
+static struct ShaderUniformValue current_pass_values[MAX_UNIFORM_COUNT];
 
 static int
 render_command_cmp(const void *a_ptr, const void *b_ptr)
@@ -62,9 +64,12 @@ renderer_init(void)
 {
 	// initialize GLEW
 	glewExperimental = GL_TRUE;
-	if (glewInit() != 0) {
+	static int glew_initialized = 0;
+	if (!glew_initialized && glewInit() != GLEW_OK) {
 		err(ERR_GLEW);
 		return 0;
+	} else {
+		glew_initialized = 1;
 	}
 	// silence any errors produced during GLEW initialization
 	glGetError();
@@ -83,15 +88,6 @@ renderer_init(void)
 			);
 			goto error;
 		}
-	}
-
-	// pre-allocate an array for render pass values
-	current_pass_values = malloc(
-		sizeof(struct ShaderUniformValue) * MAX_UNIFORM_COUNT
-	);
-	if (!current_pass_values) {
-		err(ERR_NO_MEM);
-		goto error;
 	}
 
 	return 1;
@@ -214,9 +210,6 @@ renderer_present(void)
 void
 renderer_shutdown(void)
 {
-	free(current_pass_values);
-	current_pass_values = 0;
-
 	for (int i = RENDER_PASS_COUNT; i > 0; i--) {
 		int index = i - 1;
 		passes[index]->cls->free(passes[index]);
