@@ -32,24 +32,24 @@ static const struct RenderPassCls *pass_classes[] = {
 
 static struct RenderPass *passes[RENDER_PASS_COUNT] = { NULL };
 
-struct DrawCommand {
+struct RenderCommnad {
 	int pass;
 	struct Geometry *geometry;
 	struct ShaderUniformValue *values;
 	size_t value_count;
 };
 
-static struct DrawList {
-	struct DrawCommand commands[RENDER_QUEUE_SIZE];
+static struct RenderQueue {
+	struct RenderCommnad commands[RENDER_QUEUE_SIZE];
 	size_t len;
-} draw_list = { .len = 0 };
+} queue = { .len = 0 };
 
 static struct ShaderUniformValue *current_pass_values = NULL;
 
 static int
-draw_command_cmp(const void *a_ptr, const void *b_ptr)
+render_command_cmp(const void *a_ptr, const void *b_ptr)
 {
-	const struct DrawCommand *a = a_ptr, *b = b_ptr;
+	const struct RenderCommnad *a = a_ptr, *b = b_ptr;
 	int pass_diff = a->pass - b->pass;
 	if (pass_diff != 0) {
 		return pass_diff;
@@ -110,20 +110,20 @@ renderer_clear(void)
 int
 renderer_present(void)
 {
-	// sort the draw commands list
+	// sort the render queue
 	qsort(
-		draw_list.commands,
-		draw_list.len,
-		sizeof(struct DrawCommand),
-		draw_command_cmp
+		queue.commands,
+		queue.len,
+		sizeof(struct RenderCommnad),
+		render_command_cmp
 	);
 
 	// perform actual draw
 	int current_pass = -1;
 	struct Shader *current_shader = NULL;
 	struct Geometry *current_geom = NULL;
-	for (size_t i = 0; i < draw_list.len; i++) {
-		struct DrawCommand *cmd = &draw_list.commands[i];
+	for (size_t i = 0; i < queue.len; i++) {
+		struct RenderCommnad *cmd = &queue.commands[i];
 
 		// switch to next render pass, if needed
 		if (current_pass != cmd->pass) {
@@ -205,8 +205,8 @@ renderer_present(void)
 		}
 	}
 
-	// trim the draw list
-	draw_list.len = 0;
+	// trim the render queue
+	queue.len = 0;
 
 	return 1;
 }
@@ -280,11 +280,11 @@ renderer_draw(
 	assert(pass < RENDER_PASS_COUNT);
 	assert(values != NULL);
 
-	if (draw_list.len == RENDER_QUEUE_SIZE) {
+	if (queue.len == RENDER_QUEUE_SIZE) {
 		err(ERR_RENDER_QUEUE_FULL);
 		return 0;
 	}
-	struct DrawCommand *cmd = &draw_list.commands[draw_list.len++];
+	struct RenderCommnad *cmd = &queue.commands[queue.len++];
 	cmd->pass = pass;
 	cmd->geometry = geom;
 	cmd->values = values;
