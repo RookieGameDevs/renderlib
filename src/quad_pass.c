@@ -1,5 +1,6 @@
-#include "error.h"
+// renderlib
 #include "renderlib.h"
+// standard C library
 #include <stdlib.h>
 
 static const char *vertex_shader = (

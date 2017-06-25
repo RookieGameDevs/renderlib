@@ -1,7 +1,6 @@
-#include "error.h"
-#include "shader.h"
+// renderlib
 #include "renderlib.h"
-#include <GL/glew.h>
+// standard C library
 #include <stdlib.h>
 
 #define SHADOW_MAP_SIZE 1024
