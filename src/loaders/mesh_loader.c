@@ -154,7 +154,8 @@ parse_geometry(
 		GL_FLOAT,
 		3,
 		vert_size,
-		(void*)offset
+		(void*)offset,
+		0
 	);
 	if (!ok) {
 		goto error;
@@ -170,7 +171,8 @@ parse_geometry(
 			GL_FLOAT,
 			3,
 			vert_size,
-			(void*)offset
+			(void*)offset,
+			0
 		);
 		if (!ok) {
 			goto error;
@@ -187,7 +189,8 @@ parse_geometry(
 			GL_FLOAT,
 			2,
 			vert_size,
-			(void*)offset
+			(void*)offset,
+			0
 		);
 		if (!ok) {
 			goto error;
@@ -204,7 +207,8 @@ parse_geometry(
 			GL_UNSIGNED_BYTE,
 			4,
 			vert_size,
-			(void*)offset
+			(void*)offset,
+			0
 		) && geometry_add_attribute(
 			geom,
 			buf,
@@ -212,7 +216,8 @@ parse_geometry(
 			GL_UNSIGNED_BYTE,
 			4,
 			vert_size,
-			(void*)(offset + 4)
+			(void*)(offset + 4),
+			0
 		);
 		if (!ok) {
 			goto error;

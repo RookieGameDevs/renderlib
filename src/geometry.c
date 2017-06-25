@@ -34,7 +34,8 @@ geometry_add_attribute(
 	GLenum type,
 	int size,
 	int stride,
-	void *offset
+	void *offset,
+	int divisor
 ) {
 	assert(geom != NULL);
 	assert(buf != NULL);
@@ -102,6 +103,10 @@ geometry_add_attribute(
 			offset
 		);
 	}
+
+	// set the divisor
+	glVertexAttribDivisor(geom->attribute_count, divisor);
+
 	if (glGetError() != GL_NO_ERROR) {
 		err(ERR_OPENGL);
 		ok = 0;

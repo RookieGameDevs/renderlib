@@ -38,6 +38,7 @@ make_test_geometry(
 		GL_FLOAT,
 		3,
 		0,
+		0,
 		0
 	);
 	geometry_add_attribute(
@@ -46,6 +47,7 @@ make_test_geometry(
 		"normal",
 		GL_FLOAT,
 		3,
+		0,
 		0,
 		0
 	);

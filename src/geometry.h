@@ -31,7 +31,8 @@ geometry_add_attribute(
 	GLenum type,
 	int size,
 	int stride,
-	void *offset
+	void *offset,
+	int divisor
 );
 
 int

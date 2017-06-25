@@ -33,6 +33,7 @@ START_TEST(test_simple)
 		GL_FLOAT,
 		3,
 		0,
+		0,
 		0
 	);
 	ck_assert(added);
@@ -53,6 +54,7 @@ START_TEST(test_simple)
 		"normal",
 		GL_FLOAT,
 		3,
+		0,
 		0,
 		0
 	);
