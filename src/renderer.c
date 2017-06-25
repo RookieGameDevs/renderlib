@@ -1,11 +1,9 @@
+// renderlib
 #include "renderlib.h"
-#include <GL/glew.h>
+// standard C library
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-// maximum size of the render queue
-#define RENDER_QUEUE_SIZE 1000
 
 // defined in shadow_pass.c
 extern struct RenderPassCls shadow_pass_cls;
@@ -19,6 +17,7 @@ extern struct RenderPassCls quad_pass_cls;
 // defined in phong_pass.c
 extern struct RenderPassCls phong_pass_cls;
 
+// render pass factory classes
 static const struct RenderPassCls *pass_classes[] = {
 	&shadow_pass_cls,
 	&text_pass_cls,
@@ -26,32 +25,38 @@ static const struct RenderPassCls *pass_classes[] = {
 	&phong_pass_cls,
 };
 
+// computed size of currently active render passes
 #define RENDER_PASS_COUNT (sizeof(pass_classes) / sizeof(struct RenderPassCls*))
 
+// render pass class instances
 static struct RenderPass *passes[RENDER_PASS_COUNT] = { NULL };
 
-struct RenderCommnad {
+struct RenderCommand {
 	int pass;
 	struct Geometry *geometry;
 	struct ShaderUniformValue *values;
 	size_t value_count;
 };
 
+// maximum size of the render queue
+#define RENDER_QUEUE_SIZE 1000
+
+// render queue
 static struct RenderQueue {
-	struct RenderCommnad commands[RENDER_QUEUE_SIZE];
+	struct RenderCommand commands[RENDER_QUEUE_SIZE];
 	size_t len;
 } queue = { .len = 0 };
 
-// Maximum number of pass shader uniforms
+// maximum number of pass shader uniforms
 #define MAX_UNIFORM_COUNT 1024
 
-// Static container of current render pass shader uniforms
+// cache of current render pass shader uniform values
 static struct ShaderUniformValue current_pass_values[MAX_UNIFORM_COUNT];
 
 static int
 render_command_cmp(const void *a_ptr, const void *b_ptr)
 {
-	const struct RenderCommnad *a = a_ptr, *b = b_ptr;
+	const struct RenderCommand *a = a_ptr, *b = b_ptr;
 	int pass_diff = a->pass - b->pass;
 	if (pass_diff != 0) {
 		return pass_diff;
@@ -110,7 +115,7 @@ renderer_present(void)
 	qsort(
 		queue.commands,
 		queue.len,
-		sizeof(struct RenderCommnad),
+		sizeof(struct RenderCommand),
 		render_command_cmp
 	);
 
@@ -119,7 +124,7 @@ renderer_present(void)
 	struct Shader *current_shader = NULL;
 	struct Geometry *current_geom = NULL;
 	for (size_t i = 0; i < queue.len; i++) {
-		struct RenderCommnad *cmd = &queue.commands[i];
+		struct RenderCommand *cmd = &queue.commands[i];
 
 		// switch to next render pass, if needed
 		if (current_pass != cmd->pass) {
@@ -277,7 +282,7 @@ renderer_draw(
 		err(ERR_RENDER_QUEUE_FULL);
 		return 0;
 	}
-	struct RenderCommnad *cmd = &queue.commands[queue.len++];
+	struct RenderCommand *cmd = &queue.commands[queue.len++];
 	cmd->pass = pass;
 	cmd->geometry = geom;
 	cmd->values = values;
