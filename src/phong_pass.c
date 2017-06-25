@@ -85,12 +85,16 @@ phong_pass_free(struct RenderPass *pass)
 static int
 phong_pass_enter(struct RenderPass *pass)
 {
+	glEnable(GL_DEPTH_TEST);
+
 	return 1;
 }
 
 static int
 phong_pass_exit(struct RenderPass *pass)
 {
+	glDisable(GL_DEPTH_TEST);
+
 	return 1;
 }
 

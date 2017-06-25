@@ -62,6 +62,9 @@ shadow_pass_enter(struct RenderPass *pass)
 	glBindFramebuffer(GL_FRAMEBUFFER, _pass->shadow_map_fb);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
+	// enable depth test
+	glEnable(GL_DEPTH_TEST);
+
 	return glGetError() == GL_NO_ERROR;
 }
 
@@ -69,6 +72,9 @@ static int
 shadow_pass_exit(struct RenderPass *pass)
 {
 	struct ShadowPass *_pass = (struct ShadowPass*)pass;
+
+	// disable depth test
+	glDisable(GL_DEPTH_TEST);
 
 	// restore the default framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

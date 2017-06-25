@@ -81,7 +81,6 @@ renderer_init(void)
 
 	// one-off OpenGL initializations
 	glClearColor(0.3, 0.3, 0.3, 1.0);
-	glEnable(GL_DEPTH_TEST);
 
 	// initialize render passes
 	for (unsigned i = 0; i < RENDER_PASS_COUNT; i++) {

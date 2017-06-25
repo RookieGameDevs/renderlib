@@ -86,7 +86,6 @@ text_pass_free(struct RenderPass *pass)
 static int
 text_pass_enter(struct RenderPass *pass)
 {
-	// TODO
 	return 1;
 }
 
