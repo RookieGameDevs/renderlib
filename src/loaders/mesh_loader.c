@@ -139,7 +139,7 @@ parse_geometry(
 	}
 
 	// allocate one buffer for entire data set
-	struct Buffer *buf = buffer_new(vsize, geom_data);
+	struct Buffer *buf = buffer_new(vsize, geom_data, GL_STATIC_DRAW);
 	if (!buf) {
 		goto error;
 	}
@@ -223,7 +223,7 @@ parse_geometry(
 	buffer_free(buf);
 
 	// set indices
-	buf = buffer_new(isize, geom_data + vsize);
+	buf = buffer_new(isize, geom_data + vsize, GL_STATIC_DRAW);
 	if (!buf) {
 		goto error;
 	}

@@ -21,14 +21,14 @@ make_test_geometry(
 		 0.5, -0.3, 0.0,
 		 0.0, 0.7, 0.0
 	};
-	struct Buffer *pos_buf = buffer_new(sizeof(positions), positions);
+	struct Buffer *pos_buf = buffer_new(sizeof(positions), positions, GL_STATIC_DRAW);
 
 	float normals[] = {
 		0.0, 0.0, 1.0,
 		0.0, 0.0, 1.0,
 		0.0, 0.0, 1.0
 	};
-	struct Buffer *norm_buf = buffer_new(sizeof(normals), normals);
+	struct Buffer *norm_buf = buffer_new(sizeof(normals), normals, GL_STATIC_DRAW);
 
 	struct Geometry *geom = geometry_new();
 	geometry_add_attribute(

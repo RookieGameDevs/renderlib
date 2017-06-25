@@ -7,7 +7,7 @@
 #include <string.h>
 
 struct Buffer*
-buffer_new(size_t size, void *initial_data)
+buffer_new(size_t size, void *initial_data, GLenum usage_hint)
 {
 	struct Buffer *buf = malloc(sizeof(struct Buffer));
 	if (!buf) {
@@ -25,7 +25,7 @@ buffer_new(size_t size, void *initial_data)
 
 	// initialize buffer storage
 	glBindBuffer(GL_ARRAY_BUFFER, buf->vbo);
-	glBufferData(GL_ARRAY_BUFFER, size, initial_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, size, initial_data, usage_hint);
 	if (glGetError() != GL_NO_ERROR) {
 		err(ERR_OPENGL);
 		goto buffer_new_error;

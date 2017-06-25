@@ -13,7 +13,7 @@ START_TEST(test_simple)
 	ck_assert(geom != NULL);
 
 	// create an empty buffer large enough to contain 3 vertex coordinates
-	struct Buffer *position_buffer = buffer_new(sizeof(float) * 9, NULL);
+	struct Buffer *position_buffer = buffer_new(sizeof(float) * 9, NULL, GL_STATIC_DRAW);
 	ck_assert(position_buffer != NULL);
 
 	// initialize the buffer with triangle vertices positions
@@ -43,7 +43,7 @@ START_TEST(test_simple)
 		0.0, 0.0, 1.0,
 		0.0, 0.0, 1.0
 	};
-	struct Buffer *normal_buffer = buffer_new(sizeof(normals), normals);
+	struct Buffer *normal_buffer = buffer_new(sizeof(normals), normals, GL_STATIC_DRAW);
 	ck_assert(normal_buffer);
 
 	// map the buffer to `normal` attribute
