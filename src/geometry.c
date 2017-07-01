@@ -173,7 +173,7 @@ geometry_free(struct Geometry *geom)
 }
 
 int
-geometry_set_elements(struct Geometry *geom, unsigned long count)
+geometry_set_array(struct Geometry *geom, unsigned long count)
 {
 	assert(geom);
 	geometry_reset_elements_descriptor(geom);
@@ -183,7 +183,7 @@ geometry_set_elements(struct Geometry *geom, unsigned long count)
 }
 
 int
-geometry_set_instances(struct Geometry *geom, unsigned long count, unsigned long primcount)
+geometry_set_instanced_array(struct Geometry *geom, unsigned long count, unsigned long primcount)
 {
 	assert(geom);
 	geometry_reset_elements_descriptor(geom);
@@ -191,4 +191,63 @@ geometry_set_instances(struct Geometry *geom, unsigned long count, unsigned long
 	geom->instanced_array.count = count;
 	geom->instanced_array.primcount = primcount;
 	return 1;
+}
+
+int
+geometry_bind(struct Geometry *geom)
+{
+	assert(geom);
+	glBindVertexArray(geom->vao);
+	return glGetError() == GL_NO_ERROR;
+}
+
+void
+geometry_unbind(struct Geometry *geom)
+{
+	assert(geom);
+	glBindVertexArray(0);
+}
+
+int
+geometry_draw(struct Geometry *geom, GLenum primitive_type)
+{
+	assert(geom);
+	assert(
+		primitive_type == GL_LINES ||
+		primitive_type == GL_LINES_ADJACENCY ||
+		primitive_type == GL_LINE_LOOP ||
+		primitive_type == GL_LINE_STRIP ||
+		primitive_type == GL_LINE_STRIP_ADJACENCY ||
+		primitive_type == GL_PATCHES ||
+		primitive_type == GL_POINTS ||
+		primitive_type == GL_TRIANGLES ||
+		primitive_type == GL_TRIANGLES_ADJACENCY ||
+		primitive_type == GL_TRIANGLE_FAN ||
+		primitive_type == GL_TRIANGLE_STRIP ||
+		primitive_type == GL_TRIANGLE_STRIP_ADJACENCY
+	);
+
+	switch (geom->type) {
+	case GEOMETRY_TYPE_ARRAY:
+		glDrawArrays(primitive_type, 0, geom->array.count);
+		break;
+	case GEOMETRY_TYPE_INDEX:
+		glDrawElements(
+			primitive_type,
+			geom->index.count,
+			geom->index.type,
+			(GLvoid*)0L
+		);
+		break;
+	case GEOMETRY_TYPE_INSTANCED_ARRAY:
+		glDrawArraysInstanced(
+			primitive_type,
+			0,
+			geom->instanced_array.count,
+			geom->instanced_array.primcount
+		);
+		break;
+	}
+
+	return glGetError() == GL_NO_ERROR;
 }

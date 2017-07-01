@@ -52,6 +52,8 @@ make_test_geometry(
 		0
 	);
 
+	geometry_set_array(geom, 3);
+
 	*r_geom = geom;
 	*r_positions = pos_buf;
 	*r_normals = norm_buf;

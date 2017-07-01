@@ -19,15 +19,15 @@ struct Geometry {
 	union {
 		struct {
 			unsigned long count;
-			unsigned long primcount;
-		} instanced_array;
+		} array;
 		struct {
 			GLenum type;
 			unsigned long count;
 		} index;
 		struct {
 			unsigned long count;
-		} array;
+			unsigned long primcount;
+		} instanced_array;
 	};
 };
 
@@ -61,10 +61,19 @@ geometry_set_index(
 );
 
 int
-geometry_set_elements(struct Geometry *geom, unsigned long count);
+geometry_set_array(struct Geometry *geom, unsigned long count);
 
 int
-geometry_set_instances(struct Geometry *geom, unsigned long count, unsigned long primcount);
+geometry_set_instanced_array(struct Geometry *geom, unsigned long count, unsigned long primcount);
+
+int
+geometry_bind(struct Geometry *geom);
+
+void
+geometry_unbind(struct Geometry *geom);
+
+int
+geometry_draw(struct Geometry *geom, GLenum primitive_type);
 
 void
 geometry_free(struct Geometry *geom);
