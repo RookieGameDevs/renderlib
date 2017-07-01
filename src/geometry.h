@@ -4,14 +4,31 @@
 
 #include <GL/glew.h>
 
+enum {
+	GEOMETRY_TYPE_ARRAY,
+	GEOMETRY_TYPE_INDEX,
+	GEOMETRY_TYPE_INSTANCED_ARRAY
+};
+
 struct Geometry {
+	/* read-only */
 	struct Attribute *attributes;
 	unsigned attribute_count;
-
-	GLenum elements_type;
-	unsigned long elements_count;
-
 	GLuint vao;
+	int type;
+	union {
+		struct {
+			unsigned long count;
+			unsigned long primcount;
+		} instanced_array;
+		struct {
+			GLenum type;
+			unsigned long count;
+		} index;
+		struct {
+			unsigned long count;
+		} array;
+	};
 };
 
 struct Attribute {
@@ -42,6 +59,12 @@ geometry_set_index(
 	GLenum type,
 	unsigned long count
 );
+
+int
+geometry_set_elements(struct Geometry *geom, unsigned long count);
+
+int
+geometry_set_instances(struct Geometry *geom, unsigned long count, unsigned long primcount);
 
 void
 geometry_free(struct Geometry *geom);

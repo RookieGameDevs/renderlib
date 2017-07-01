@@ -15,6 +15,7 @@ buffer_new(size_t size, void *initial_data, GLenum usage_hint)
 		return NULL;
 	}
 	memset(buf, 0, sizeof(struct Buffer));
+	buf->usage_hint = usage_hint;
 
 	// create a buffer
 	glGenBuffers(1, &buf->vbo);
@@ -43,15 +44,20 @@ buffer_new_error:
 }
 
 int
-buffer_update(struct Buffer *buf, void *data)
+buffer_update(struct Buffer *buf, size_t size, void *data)
 {
 	assert(buf != NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, buf->vbo);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, buf->size, data);
+	if (buf->size > size) {
+		glBufferSubData(GL_ARRAY_BUFFER, 0, size, data);
+	} else {
+		glBufferData(GL_ARRAY_BUFFER, size, data, buf->usage_hint);
+	}
 	if (glGetError() != GL_NO_ERROR) {
 		err(ERR_OPENGL);
 		return 0;
 	}
+	buf->size = size;
 	return 1;
 }
 

@@ -13,7 +13,8 @@ START_TEST(test_simple)
 	ck_assert(geom != NULL);
 
 	// create an empty buffer large enough to contain 3 vertex coordinates
-	struct Buffer *position_buffer = buffer_new(sizeof(float) * 9, NULL, GL_STATIC_DRAW);
+	size_t size = sizeof(float) * 9;
+	struct Buffer *position_buffer = buffer_new(size, NULL, GL_STATIC_DRAW);
 	ck_assert(position_buffer != NULL);
 
 	// initialize the buffer with triangle vertices positions
@@ -22,7 +23,7 @@ START_TEST(test_simple)
 		 0.5, 0.0, 0.0,
 		 0.0, 0.7, 0.0
 	};
-	int updated = buffer_update(position_buffer, positions);
+	int updated = buffer_update(position_buffer, size, positions);
 	ck_assert(updated);
 
 	// map the buffer to `position` attribute
@@ -81,7 +82,8 @@ START_TEST(test_load_from_file)
 	unsigned animations_count = 0;
 	ck_assert(load_mesh(data, size, &geom, &animations, &animations_count, NULL));
 	ck_assert_uint_eq(geom->attribute_count, 5);
-	ck_assert_uint_eq(geom->elements_count, 37368);
+	ck_assert_int_eq(geom->type, GEOMETRY_TYPE_INDEX);
+	ck_assert_uint_eq(geom->index.count, 37368);
 	ck_assert_uint_eq(animations_count, 1);
 
 	geometry_free(geom);

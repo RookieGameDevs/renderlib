@@ -119,6 +119,20 @@ geometry_add_attribute(
 	return ok;
 }
 
+static void
+geometry_reset_elements_descriptor(struct Geometry *geom)
+{
+	// unbind any element array associated with the geometry
+	glBindVertexArray(geom->vao);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	// zero the union part of the geometry struct
+	off_t dscr_offset = offsetof(struct Geometry, type) + sizeof(int);
+	size_t dscr_size = sizeof(struct Geometry) - dscr_offset;
+	memset(((void*)geom) + dscr_offset, 0, dscr_size);
+}
+
 int
 geometry_set_index(
 	struct Geometry *geom,
@@ -134,12 +148,12 @@ geometry_set_index(
 		type == GL_UNSIGNED_INT
 	);
 
+	geometry_reset_elements_descriptor(geom);
 	glBindVertexArray(geom->vao);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf->vbo);
-
-	geom->elements_type = type;
-	geom->elements_count = count;
-
+	geom->type = GEOMETRY_TYPE_INDEX;
+	geom->index.type = type;
+	geom->index.count = count;
 	glBindVertexArray(0);
 
 	return glGetError() == GL_NO_ERROR;
@@ -156,4 +170,25 @@ geometry_free(struct Geometry *geom)
 		free(geom->attributes);
 		free(geom);
 	}
+}
+
+int
+geometry_set_elements(struct Geometry *geom, unsigned long count)
+{
+	assert(geom);
+	geometry_reset_elements_descriptor(geom);
+	geom->type = GEOMETRY_TYPE_ARRAY;
+	geom->array.count = count;
+	return 1;
+}
+
+int
+geometry_set_instances(struct Geometry *geom, unsigned long count, unsigned long primcount)
+{
+	assert(geom);
+	geometry_reset_elements_descriptor(geom);
+	geom->type = GEOMETRY_TYPE_INSTANCED_ARRAY;
+	geom->instanced_array.count = count;
+	geom->instanced_array.primcount = primcount;
+	return 1;
 }
