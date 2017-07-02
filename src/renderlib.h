@@ -15,6 +15,30 @@
 // matlib
 #include <matlib.h>
 
+/**
+ * Set of uniform values.
+ */
+struct RenderPassUniformSet {
+	struct RenderPassUniformSetCls *cls;
+};
+
+/**
+ * Uniform value set class.
+ */
+struct RenderPassUniformSetCls {
+	void
+	(*free)(struct RenderPassUniformSet *s);
+
+	struct ShaderUniformValue*
+	(*get_value)(struct RenderPassUniformSet *s, int id);
+
+	struct ShaderUniformValue*
+	(*get_values)(struct RenderPassUniformSet *s, unsigned *r_count);
+};
+
+/**
+ * Render pass.
+ */
 struct RenderPass {
 	const struct RenderPassCls *cls;
 };
@@ -36,6 +60,21 @@ struct RenderPassCls {
 
 	struct Shader*
 	(*get_shader)(struct RenderPass *pass);
+
+	struct RenderPassUniformSet*
+	(*create_uniform_set)(struct RenderPass *pass);
+};
+
+struct RenderCommand {
+	int pass;
+	struct Geometry *geometry;
+	int primitive_type;
+	struct ShaderUniformValue *values;
+	size_t values_count;
+
+	int (*pre_exec)(void *userdata);
+	int (*post_exec)(void *userdata);
+	void *userdata;
 };
 
 /**
@@ -125,12 +164,7 @@ renderer_clear(void);
  * Add a geometry draw command to render queue.
  */
 int
-renderer_draw(
-	struct Geometry *geom,
-	int pass,
-	struct ShaderUniformValue *values,
-	size_t value_count
-);
+renderer_add_command(const struct RenderCommand *cmd);
 
 /**
  * Render current render queue and flush it.

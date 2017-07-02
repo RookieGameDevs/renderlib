@@ -1,12 +1,20 @@
+// renderlib
+#include "buffer.h"
 #include "error.h"
 #include "font.h"
+#include "geometry.h"
+#include "scene.h"
 #include "text.h"
-#include <GL/glew.h>
+#include "text_pass.h"
+#include "renderlib.h"
+// standard C library
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+// OpenGL extension wrangler
+#include <GL/glew.h>
 
 struct Text*
 text_new(struct Font *font)
@@ -18,44 +26,56 @@ text_new(struct Font *font)
 		err(ERR_NO_MEM);
 		return NULL;
 	}
-	text->len = 0;
-	text->width = 0;
-	text->height = 0;
-	text->vao = text->coords = text->chars = 0;
+	memset(text, 0, sizeof(struct Text));
 	text->font = font;
+	text->opacity = 1;
+	text->color = vec(1, 1, 1, 1);
 
-	// generate vertex array
-	glGenVertexArrays(1, &text->vao);
-	glBindVertexArray(text->vao);
+	// create attribute buffers
+	text->chars = buffer_new(0, NULL, GL_DYNAMIC_DRAW);
+	text->coords = buffer_new(0, NULL, GL_DYNAMIC_DRAW);
+	if (!text->chars || !text->coords) {
+		text_free(text);
+		return NULL;
+	}
 
-	// generate vertex buffers
-	// NOTE: buffers are initialized when `text_set_string()` is called
-	glGenBuffers(1, &text->coords);
-	glGenBuffers(1, &text->chars);
+	// create geometry
+	text->geometry = geometry_new();
+	if (!text->geometry) {
+		text_free(text);
+		return NULL;
+	}
 
-	// setup coords attribute array
-	glBindBuffer(GL_ARRAY_BUFFER, text->coords);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-	glVertexAttribDivisor(0, 1);
+	// setup position attribute array
+	int ok = geometry_add_attribute(
+		text->geometry,
+		text->coords,
+		"position",
+		GL_FLOAT,
+		2,
+		sizeof(GLfloat) * 2,
+		(void*)0,
+		1
+	);
 
 	// setup character indices attribute array
 	// NOTE: each index is one byte long (the character itself), thus,
 	// anything except ASCII is not supported
-	glBindBuffer(GL_ARRAY_BUFFER, text->chars);
-	glEnableVertexAttribArray(1);
-	glVertexAttribIPointer(1, 1, GL_UNSIGNED_BYTE, 0, (GLvoid*)0);
-	glVertexAttribDivisor(1, 1);
+	ok &= geometry_add_attribute(
+		text->geometry,
+		text->chars,
+		"character",
+		GL_UNSIGNED_BYTE,
+		1,
+		1,
+		(void*)0,
+		1
+	);
 
-	if (!text->vao || !text->chars || !text->coords ||
-	    glGetError() != GL_NO_ERROR) {
-		err(ERR_OPENGL);
+	if (!ok) {
 		text_free(text);
-		text = NULL;
+		return NULL;
 	}
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
 
 	return text;
 }
@@ -68,14 +88,8 @@ text_set_string(struct Text *text, const char *str)
 
 	text->len = strlen(str);
 
-	// setup the buffer of character indices, which in turn are character
-	// themselves
-	// NOTE: this doesn't support anything except ASCII
-	glBindBuffer(GL_ARRAY_BUFFER, text->chars);
-	glBufferData(GL_ARRAY_BUFFER, text->len, str, GL_STATIC_DRAW);
-	if (glGetError() != GL_NO_ERROR) {
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		err(ERR_OPENGL);
+	// update characters buffer
+	if (!buffer_update(text->chars, text->len, (void*)str)) {
 		return 0;
 	}
 
@@ -105,20 +119,13 @@ text_set_string(struct Text *text, const char *str)
 		coords[c][1] -= offset;
 	}
 
-	// update the character coordinates buffer
-	glBindBuffer(GL_ARRAY_BUFFER, text->coords);
-	glBufferData(
-		GL_ARRAY_BUFFER,
-		sizeof(float) * text->len * 2,
-		coords,
-		GL_STATIC_DRAW
-	);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	if (glGetError() != GL_NO_ERROR) {
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		err(ERR_OPENGL);
+	// update coordinates buffer
+	if (!buffer_update(text->coords, text->len * sizeof(GLfloat) * 2, coords)) {
 		return 0;
 	}
+
+	// update geometry instanced primitive draw parameters
+	geometry_set_instanced_array(text->geometry, 4, text->len);
 
 	return 1;
 }
@@ -150,9 +157,133 @@ void
 text_free(struct Text *text)
 {
 	if (text) {
-		glDeleteBuffers(1, &text->chars);
-		glDeleteBuffers(1, &text->coords);
-		glDeleteVertexArrays(1, &text->vao);
+		buffer_free(text->coords);
+		buffer_free(text->chars);
+		geometry_free(text->geometry);
 		free(text);
 	}
+}
+
+static void
+text_object_free(struct Object *obj);
+
+static int
+text_object_render(struct Object *obj, struct ObjectRenderContext *ctx);
+
+struct TextObject {
+	struct Object super;
+	struct Text *text;
+	struct RenderPassUniformSet *uniform_set;
+	Mat mvp;
+	GLuint glyph_sampler;
+	GLuint atlas_sampler;
+	GLint atlas_offset;
+};
+
+static struct ObjectCls text_object_cls = {
+	.name = "text",
+	.free = text_object_free,
+	.render = text_object_render
+};
+
+struct Object*
+text_to_object(struct Text *text)
+{
+	// create and initialize text object
+	struct TextObject *obj = malloc(sizeof(struct TextObject));
+	if (!obj) {
+		err(ERR_NO_MEM);
+		return NULL;
+	}
+	memset(obj, 0, sizeof(struct TextObject));
+	obj->text = text;
+	obj->super.cls = &text_object_cls;
+	obj->glyph_sampler = 0;
+	obj->atlas_sampler = 1;
+	obj->atlas_offset = font_get_atlas_offset(text->font);
+	obj->super.visible = 1;
+	obj->super.scale = vec(1, 1, 1, 0);
+	obj->super.rotation = qtr(1, 0, 0, 0);
+	mat_ident(&obj->mvp);
+
+	// create and initialize uniform set
+	struct RenderPass *pass = renderer_get_pass(TEXT_PASS);
+	obj->uniform_set = pass->cls->create_uniform_set(pass);
+	if (!obj->uniform_set) {
+		free(obj);
+		return NULL;
+	}
+
+#define set_value(_id, _count, _data) \
+	{ \
+		struct ShaderUniformValue *v = obj->uniform_set->cls->get_value(obj->uniform_set, _id); \
+		v->count = _count; \
+		v->data = _data; \
+	}
+
+	set_value(TEXT_PASS_UNIFORM_MVP, 1, &obj->mvp);
+	set_value(TEXT_PASS_UNIFORM_GLYPH_SAMPLER, 1, &obj->glyph_sampler);
+	set_value(TEXT_PASS_UNIFORM_ATLAS_SAMPLER, 1, &obj->atlas_sampler);
+	set_value(TEXT_PASS_UNIFORM_ATLAS_OFFSET, 1, &obj->atlas_offset);
+	set_value(TEXT_PASS_UNIFORM_COLOR, 1, &text->color);
+	set_value(TEXT_PASS_UNIFORM_OPACITY, 1, &text->opacity);
+
+#undef set_value
+
+	return (struct Object*)obj;
+}
+
+static void
+text_object_free(struct Object *obj)
+{
+	if (obj) {
+		struct TextObject *_obj = (struct TextObject*)obj;
+		_obj->uniform_set->cls->free(_obj->uniform_set);
+		free(_obj);
+	}
+}
+
+static int
+text_object_render_command_pre_exec(void *userdata)
+{
+	struct TextObject *obj = userdata;
+	glActiveTexture(GL_TEXTURE0 + obj->glyph_sampler);
+	glBindTexture(GL_TEXTURE_1D, font_get_glyph_texture(obj->text->font));
+	glActiveTexture(GL_TEXTURE0 + obj->atlas_sampler);
+	glBindTexture(GL_TEXTURE_RECTANGLE, font_get_atlas_texture(obj->text->font));
+	return glGetError() == GL_NO_ERROR;
+}
+
+static int
+text_object_render(struct Object *obj, struct ObjectRenderContext *ctx)
+{
+	struct TextObject *_obj = (struct TextObject*)obj;
+
+	// compose model-view-projection matrix
+	Mat modelview;
+	mat_mul(ctx->view, ctx->model, &modelview);
+	mat_mul(ctx->projection, &modelview, &_obj->mvp);
+
+	struct ShaderUniformValue *values = NULL;
+	unsigned values_count = 0;
+	values = _obj->uniform_set->cls->get_values(_obj->uniform_set, &values_count);
+
+	// TODO: move this to appropriate place
+	glActiveTexture(GL_TEXTURE0 + _obj->glyph_sampler);
+	glBindTexture(GL_TEXTURE_1D, font_get_glyph_texture(_obj->text->font));
+	glActiveTexture(GL_TEXTURE0 + _obj->atlas_sampler);
+	glBindTexture(GL_TEXTURE_RECTANGLE, font_get_atlas_texture(_obj->text->font));
+
+	struct RenderCommand cmd = {
+		.geometry = _obj->text->geometry,
+		.primitive_type = GL_TRIANGLE_STRIP,
+		.pass = TEXT_PASS,
+		.values = values,
+		.values_count = values_count,
+		.pre_exec = text_object_render_command_pre_exec,
+		.post_exec = NULL,
+		.userdata = _obj
+	};
+
+	return renderer_add_command(&cmd);
 }

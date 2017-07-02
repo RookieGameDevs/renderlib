@@ -17,8 +17,8 @@ setup(void)
 		"OpenGL",
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
-		640,
-		480,
+		TEST_WINDOW_WIDTH,
+		TEST_WINDOW_HEIGHT,
 		SDL_WINDOW_OPENGL
 	);
 	ck_assert(window != NULL);
@@ -62,7 +62,7 @@ teardown(void)
 }
 
 void
-render_frame(const char *testcase_name)
+test_render_frame(const char *testcase_name)
 {
 	SDL_SetWindowTitle(window, testcase_name);
 	SDL_GL_SwapWindow(window);

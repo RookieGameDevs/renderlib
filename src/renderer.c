@@ -31,13 +31,6 @@ static const struct RenderPassCls *pass_classes[] = {
 // render pass class instances
 static struct RenderPass *passes[RENDER_PASS_COUNT] = { NULL };
 
-struct RenderCommand {
-	int pass;
-	struct Geometry *geometry;
-	struct ShaderUniformValue *values;
-	size_t value_count;
-};
-
 // maximum size of the render queue
 #define RENDER_QUEUE_SIZE 1000
 
@@ -152,48 +145,47 @@ renderer_present(void)
 			// bind the shader and initialize pass values
 			current_shader = passes[current_pass]->cls->get_shader(passes[current_pass]);
 			shader_bind(current_shader);
-			for (unsigned u = 0; u < current_shader->uniform_count; u++) {
-				current_pass_values[u].uniform = &current_shader->uniforms[u];
-				current_pass_values[u].count = 0;
-				current_pass_values[u].data = NULL;
-			}
 		}
 
 		// update only changed uniforms
-		for (unsigned u = 0; u < current_shader->uniform_count; u++) {
-			for (unsigned v = 0; v < cmd->value_count; v++) {
-				if (current_pass_values[u].uniform != cmd->values[v].uniform) {
-					continue;
+		for (unsigned v = 0; v < cmd->values_count; v++) {
+			if (current_pass_values[v].uniform != cmd->values[v].uniform ||
+			    current_pass_values[v].data != cmd->values[v].data ||
+			    current_pass_values[v].count != cmd->values[v].count) {
+				int ok = shader_uniform_set(
+					cmd->values[v].uniform,
+					cmd->values[v].count,
+					cmd->values[v].data
+				);
+				if (!ok) {
+					err(ERR_GENERIC);
+					return 0;
 				}
-
-				if (current_pass_values[u].data != cmd->values[v].data ||
-				    current_pass_values[u].count != cmd->values[v].count) {
-					current_pass_values[u] = cmd->values[v];
-					int ok = shader_uniform_set(
-						cmd->values[v].uniform,
-						cmd->values[v].count,
-						cmd->values[v].data
-					);
-					if (!ok) {
-						// TODO: push proper error message
-						return 0;
-					}
-					break;
-				}
+				current_pass_values[v] = cmd->values[v];
 			}
 		}
 
 		// bind geometry
 		if (current_geom != cmd->geometry) {
-			glBindVertexArray(cmd->geometry->vao);
+			if (current_geom) {
+				geometry_unbind(current_geom);
+				current_geom = NULL;
+			}
+			if (!geometry_bind(cmd->geometry)) {
+				return 0;
+			}
 			current_geom = cmd->geometry;
 		}
 
 		// draw!
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		if (glGetError() != GL_NO_ERROR) {
-			err(ERR_OPENGL);
-			break;
+		if (cmd->pre_exec && !cmd->pre_exec(cmd->userdata)) {
+			return 0;
+		}
+		if (!geometry_draw(current_geom, cmd->primitive_type)) {
+			return 0;
+		}
+		if (cmd->post_exec && !cmd->post_exec(cmd->userdata)) {
+			return 0;
 		}
 	}
 
@@ -267,24 +259,19 @@ render_quad(
 }
 
 int
-renderer_draw(
-	struct Geometry *geom,
-	int pass,
-	struct ShaderUniformValue *values,
-	size_t value_count
-) {
-	assert(geom);
-	assert(pass < RENDER_PASS_COUNT);
-	assert(values != NULL);
+renderer_add_command(const struct RenderCommand *cmd)
+{
+	assert(cmd);
+	assert(cmd->geometry);
+	assert(cmd->pass < RENDER_PASS_COUNT);
+	assert(cmd->values_count == 0 || cmd->values != NULL);
 
 	if (queue.len == RENDER_QUEUE_SIZE) {
 		err(ERR_RENDER_QUEUE_FULL);
 		return 0;
 	}
-	struct RenderCommand *cmd = &queue.commands[queue.len++];
-	cmd->pass = pass;
-	cmd->geometry = geom;
-	cmd->values = values;
-	cmd->value_count = value_count;
+
+	queue.commands[queue.len++] = *cmd;
+
 	return 1;
 }

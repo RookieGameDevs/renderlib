@@ -11,11 +11,30 @@ struct MeshProps;
 struct TextProps;
 struct QuadProps;
 
+struct ObjectRenderContext {
+	struct Camera *camera;
+	struct Light *light;
+	Mat *model;
+	Mat *view;
+	Mat *projection;
+};
+
 struct Object {
+	struct ObjectCls *cls;
 	Vec position;
 	Qtr rotation;
 	Vec scale;
 	int visible;
+};
+
+struct ObjectCls {
+	const char *name;
+
+	void
+	(*free)(struct Object *obj);
+
+	int
+	(*render)(struct Object *obj, struct ObjectRenderContext *ctx);
 };
 
 struct Scene;

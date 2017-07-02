@@ -131,11 +131,22 @@ START_TEST(test_simple_draw)
 		values[i].uniform = uniform;
 	}
 
+	struct RenderCommand cmd = {
+		.geometry = geom,
+		.primitive_type = GL_TRIANGLES,
+		.pass = PHONG_PASS,
+		.values = values,
+		.values_count = value_count,
+		.pre_exec = NULL,
+		.post_exec = NULL,
+		.userdata = NULL
+	};
+
 	// perform the draw
 	renderer_clear();
-	ck_assert(renderer_draw(geom, PHONG_PASS, values, value_count));
+	ck_assert(renderer_add_command(&cmd));
 	ck_assert(renderer_present());
-	render_frame("test_simple_draw");
+	test_render_frame(__func__);
 
 	buffer_free(norm_buf);
 	buffer_free(pos_buf);
