@@ -128,7 +128,7 @@ geometry_reset_elements_descriptor(struct Geometry *geom)
 	glBindVertexArray(0);
 
 	// zero the union part of the geometry struct
-	off_t dscr_offset = offsetof(struct Geometry, type) + sizeof(int);
+	size_t dscr_offset = offsetof(struct Geometry, type) + sizeof(int);
 	size_t dscr_size = sizeof(struct Geometry) - dscr_offset;
 	memset(((void*)geom) + dscr_offset, 0, dscr_size);
 }
