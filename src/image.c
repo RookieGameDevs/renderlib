@@ -40,7 +40,7 @@ read_png(struct Buffer *buf, unsigned *r_width, unsigned *r_height, int *fmt) {
 	void *data = NULL;
 	png_structp png_ptr = NULL;
 	png_infop info_ptr = NULL;
-	png_bytepp rows = NULL;
+	png_bytepp row_pointers = NULL;
 
 	// attempt to read 8 bytes and check whether we're reading a PNG file
 	size_t hdr_size = 8;
@@ -115,6 +115,9 @@ read_png(struct Buffer *buf, unsigned *r_width, unsigned *r_height, int *fmt) {
 		color_type = PNG_COLOR_TYPE_RGBA;
 	}
 
+	// update png info structs
+	png_read_update_info(png_ptr, info_ptr);
+
 	// retrieve image size
 	int width = png_get_image_width(png_ptr, info_ptr);
 	int height = png_get_image_height(png_ptr, info_ptr);
@@ -140,20 +143,20 @@ read_png(struct Buffer *buf, unsigned *r_width, unsigned *r_height, int *fmt) {
 	}
 
 	// setup an array of image row pointers
-	rows = malloc(height * sizeof(png_bytep));
-	if (!rows) {
+	row_pointers = malloc(height * sizeof(png_bytep));
+	if (!row_pointers) {
 		err(ERR_NO_MEM);
 		goto error;
 	}
 	for (size_t r = 0; r < height; r++) {
-		rows[r] = data + rowbytes * r;
+		row_pointers[r] = data + rowbytes * r;
 	}
 
 	// read image data
-	png_read_image(png_ptr, rows);
+	png_read_image(png_ptr, row_pointers);
 
 cleanup:
-	free(rows);
+	free(row_pointers);
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 	return data;
 
